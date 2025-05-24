@@ -30,7 +30,7 @@ export default function DeliveryLoginScreen() {
 
     // Simulate API call
     setTimeout(async () => {
-      if (email === 'delivery@bhathi.com' && password === 'delivery123') {
+      if (email === 'delivery@bharathi.com' && password === 'delivery123') {
         // Store user data
         await AsyncStorage.setItem('userRole', 'delivery');
         await AsyncStorage.setItem('userEmail', email);
@@ -46,7 +46,7 @@ export default function DeliveryLoginScreen() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail('delivery@bhathi.com');
+    setEmail('delivery@bharathi.com');
     setPassword('delivery123');
   };
 
@@ -69,7 +69,7 @@ export default function DeliveryLoginScreen() {
                 <Ionicons name="bicycle" size={50} color="white" />
               </View>
               <Text style={styles.title}>Delivery Partner</Text>
-              <Text style={styles.subtitle}>Welcome to BHATHI ENTERPRISES</Text>
+              <Text style={styles.subtitle}>Welcome to BHARATHI ENTERPRISES</Text>
               <Text style={styles.tagline}>Earn while delivering fresh groceries</Text>
               
               {/* Earnings Badge */}
@@ -151,7 +151,7 @@ export default function DeliveryLoginScreen() {
           {/* Demo Info */}
           <View style={styles.demoInfo}>
             <Text style={styles.demoTitle}>Demo Credentials:</Text>
-            <Text style={styles.demoText}>Email: delivery@bhathi.com</Text>
+            <Text style={styles.demoText}>Email: delivery@bharathi.com</Text>
             <Text style={styles.demoText}>Password: delivery123</Text>
           </View>
         </View>

@@ -265,7 +265,7 @@ export default function CustomerHome() {
             <View style={styles.promiseContent}>
               <Ionicons name="flash" size={24} color="white" />
               <View style={styles.promiseTextContainer}>
-                <Text style={styles.promiseTitle}>BHATHI ENTERPRISES</Text>
+                <Text style={styles.promiseTitle}>BHARATHI ENTERPRISES</Text>
                 <Text style={styles.promiseSubtitle}>Grocery in 30 minutes</Text>
               </View>
             </View>

@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "BHATHI ENTERPRISES",
+    "name": "BHARATHI ENTERPRISES",
     "slug": "ap30",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "ap30",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -17,7 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.akhildivakara.ap30"
+      "package": "com.bharathienterprises.ap30"
     },
     "web": {
       "bundler": "metro",

@@ -30,7 +30,7 @@ export default function AdminLoginScreen() {
 
     // Simulate API call
     setTimeout(async () => {
-      if (email === 'admin@bhathi.com' && password === 'admin123') {
+      if (email === 'admin@bharathi.com' && password === 'admin123') {
         // Store user data
         await AsyncStorage.setItem('userRole', 'admin');
         await AsyncStorage.setItem('userEmail', email);
@@ -46,7 +46,7 @@ export default function AdminLoginScreen() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail('admin@bhathi.com');
+    setEmail('admin@bharathi.com');
     setPassword('admin123');
   };
 
@@ -69,7 +69,7 @@ export default function AdminLoginScreen() {
                 <Ionicons name="shield-checkmark" size={50} color="white" />
               </View>
               <Text style={styles.title}>Admin Portal</Text>
-              <Text style={styles.subtitle}>BHATHI ENTERPRISES</Text>
+              <Text style={styles.subtitle}>BHARATHI ENTERPRISES</Text>
               <Text style={styles.tagline}>Secure Administrative Access</Text>
               
               {/* Security Notice */}
@@ -151,7 +151,7 @@ export default function AdminLoginScreen() {
           {/* Demo Info */}
           <View style={styles.demoInfo}>
             <Text style={styles.demoTitle}>Demo Credentials:</Text>
-            <Text style={styles.demoText}>Email: admin@bhathi.com</Text>
+            <Text style={styles.demoText}>Email: admin@bharathi.com</Text>
             <Text style={styles.demoText}>Password: admin123</Text>
           </View>
         </View>

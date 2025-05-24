@@ -27,7 +27,7 @@ export default function LandingScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Ionicons name="flash" size={40} color="white" />
-            <Text style={styles.title}>BHATHI ENTERPRISES</Text>
+            <Text style={styles.title}>BHARATHI ENTERPRISES</Text>
             <Text style={styles.subtitle}>30-minute delivery promise</Text>
             
             {/* Hidden Admin/Delivery Access */}

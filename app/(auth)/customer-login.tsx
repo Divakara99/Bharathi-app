@@ -15,39 +15,89 @@ import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CustomerLoginScreen() {
-  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    console.log('=== HANDLE LOGIN STARTED ===');
+    console.log('Phone Number:', phoneNumber);
+    console.log('Password:', password);
+    console.log('Current loading state:', loading);
+    
+    if (!phoneNumber || !password) {
+      console.log('ERROR: Missing fields');
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
+    // Basic phone number validation (10 digits)
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      console.log('ERROR: Invalid phone number format');
+      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    console.log('Validation passed, setting loading to true');
     setLoading(true);
 
     // Simulate API call
     setTimeout(async () => {
-      if (email === 'customer@quickmart.com' && password === 'customer123') {
-        // Store user data
-        await AsyncStorage.setItem('userRole', 'customer');
-        await AsyncStorage.setItem('userEmail', email);
-        
-        // Navigate to customer dashboard
-        router.replace('/(customer)');
+      console.log('=== API CALL SIMULATION ===');
+      console.log('Checking credentials...');
+      console.log('Expected phone: 9876543210');
+      console.log('Expected password: customer123');
+      console.log('Actual phone:', phoneNumber);
+      console.log('Actual password:', password);
+      
+      if (phoneNumber === '9876543210' && password === 'customer123') {
+        console.log('✅ Credentials match! Proceeding with login...');
+        try {
+          // Store user data
+          await AsyncStorage.setItem('userRole', 'customer');
+          await AsyncStorage.setItem('userPhone', phoneNumber);
+          console.log('✅ Data stored in AsyncStorage');
+          
+          // Navigate to customer dashboard
+          console.log('🚀 Navigating to customer dashboard...');
+          router.replace('/(customer)');
+        } catch (error) {
+          console.error('❌ Error during login process:', error);
+          Alert.alert('Error', 'Login failed. Please try again.');
+        }
       } else {
-        Alert.alert('Error', 'Invalid credentials');
+        console.log('❌ Credentials do not match!');
+        Alert.alert('Error', 'Invalid phone number or password');
       }
       
+      console.log('Setting loading to false');
       setLoading(false);
     }, 1000);
   };
 
   const fillDemoCredentials = () => {
-    setEmail('customer@quickmart.com');
+    console.log('Demo credentials button clicked!');
+    setPhoneNumber('9876543210');
     setPassword('customer123');
+    console.log('Demo credentials filled');
+  };
+
+  const testLogin = () => {
+    console.log('=== BUTTON CLICKED ===');
+    console.log('Phone Number:', phoneNumber);
+    console.log('Password:', password);
+    console.log('Loading state:', loading);
+    
+    if (!phoneNumber || !password) {
+      console.log('Missing fields detected');
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    console.log('Calling handleLogin...');
+    handleLogin();
   };
 
   return (
@@ -69,7 +119,7 @@ export default function CustomerLoginScreen() {
                 <Ionicons name="basket" size={50} color="white" />
               </View>
               <Text style={styles.title}>Customer Login</Text>
-              <Text style={styles.subtitle}>Welcome to BHATHI ENTERPRISES</Text>
+              <Text style={styles.subtitle}>Welcome to BHARATHI ENTERPRISES</Text>
               <Text style={styles.tagline}>Shop Fresh Groceries with all Essential Daily Needs</Text>
             </View>
           </View>
@@ -77,15 +127,15 @@ export default function CustomerLoginScreen() {
           {/* Form */}
           <View style={styles.form}>
             <View style={styles.inputContainer}>
-              <Ionicons name="mail" size={20} color="rgba(255,255,255,0.7)" />
+              <Ionicons name="call" size={20} color="rgba(255,255,255,0.7)" />
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder="Phone Number"
                 placeholderTextColor="rgba(255,255,255,0.7)"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+                maxLength={10}
               />
             </View>
 
@@ -115,37 +165,39 @@ export default function CustomerLoginScreen() {
               <Text style={styles.demoButtonText}>Use Demo Credentials</Text>
             </TouchableOpacity>
 
+            {/* Main Login Button */}
             <TouchableOpacity
-              style={styles.loginButton}
-              onPress={handleLogin}
-              disabled={loading}
+              style={{
+                backgroundColor: 'white',
+                padding: 20,
+                borderRadius: 12,
+                alignItems: 'center',
+                marginBottom: 10
+              }}
+              onPress={() => {
+                console.log('🚀 LOGIN BUTTON CLICKED!');
+                console.log('Phone:', phoneNumber);
+                console.log('Password:', password);
+                
+                if (phoneNumber === '9876543210' && password === 'customer123') {
+                  console.log('✅ Login successful!');
+                  router.replace('/(customer)');
+                } else {
+                  console.log('❌ Wrong credentials');
+                  alert('Please use: Phone: 9876543210, Password: customer123');
+                }
+              }}
             >
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Signing In...' : 'Start Shopping'}
+              <Text style={{ color: '#059669', fontSize: 18, fontWeight: 'bold' }}>
+                🛒 START SHOPPING
               </Text>
             </TouchableOpacity>
-          </View>
-
-          {/* Features */}
-          <View style={styles.features}>
-            <View style={styles.feature}>
-              <Ionicons name="flash" size={20} color="white" />
-              <Text style={styles.featureText}>30-min delivery</Text>
-            </View>
-            <View style={styles.feature}>
-              <Ionicons name="leaf" size={20} color="white" />
-              <Text style={styles.featureText}>Fresh groceries</Text>
-            </View>
-            <View style={styles.feature}>
-              <Ionicons name="shield-checkmark" size={20} color="white" />
-              <Text style={styles.featureText}>Safe shopping</Text>
-            </View>
           </View>
 
           {/* Demo Info */}
           <View style={styles.demoInfo}>
             <Text style={styles.demoTitle}>Demo Credentials:</Text>
-            <Text style={styles.demoText}>Email: customer@quickmart.com</Text>
+            <Text style={styles.demoText}>Phone: 9876543210</Text>
             <Text style={styles.demoText}>Password: customer123</Text>
           </View>
         </View>
@@ -229,32 +281,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
-  },
-  loginButton: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  loginButtonText: {
-    color: '#059669',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  features: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 20,
-  },
-  feature: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  featureText: {
-    color: 'white',
-    fontSize: 12,
-    marginTop: 5,
-    textAlign: 'center',
   },
   demoInfo: {
     backgroundColor: 'rgba(255,255,255,0.1)',

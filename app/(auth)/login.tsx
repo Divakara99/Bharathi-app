@@ -128,7 +128,7 @@ export default function LoginScreen() {
               <Text style={styles.title}>
                 {roleKey.charAt(0).toUpperCase() + roleKey.slice(1)} Login
               </Text>
-              <Text style={styles.subtitle}>Welcome to BHATHI ENTERPRISES</Text>
+              <Text style={styles.subtitle}>Welcome to BHARATHI ENTERPRISES</Text>
             </View>
           </View>
 
