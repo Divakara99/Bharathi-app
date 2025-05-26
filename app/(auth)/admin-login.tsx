@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { USER_CREDENTIALS } from '../../config/auth';
 
 export default function AdminLoginScreen() {
   const [email, setEmail] = useState('');
@@ -30,24 +31,51 @@ export default function AdminLoginScreen() {
 
     // Simulate API call
     setTimeout(async () => {
-      if (email === 'admin@bharathi.com' && password === 'admin123') {
-        // Store user data
-        await AsyncStorage.setItem('userRole', 'admin');
-        await AsyncStorage.setItem('userEmail', email);
-        
-        // Navigate to admin dashboard
-        router.replace('/(admin)');
-      } else {
-        Alert.alert('Error', 'Invalid credentials');
+      try {
+        let adminFound = false;
+        let adminName = '';
+
+        // Check registered admins first
+        const existingAdmins = await AsyncStorage.getItem('adminAccounts');
+        if (existingAdmins) {
+          const adminList = JSON.parse(existingAdmins);
+          const registeredAdmin = adminList.find(
+            (admin: any) => admin.email === email.toLowerCase() && admin.password === password && admin.isActive
+          );
+          
+          if (registeredAdmin) {
+            adminFound = true;
+            adminName = registeredAdmin.name;
+          }
+        }
+
+        // Fallback to default admin credentials
+        if (!adminFound) {
+          const admin = USER_CREDENTIALS.admin;
+          if (email === admin.email && password === admin.password) {
+            adminFound = true;
+            adminName = admin.name;
+          }
+        }
+
+        if (adminFound) {
+          // Store user data
+          await AsyncStorage.setItem('userRole', 'admin');
+          await AsyncStorage.setItem('userEmail', email);
+          await AsyncStorage.setItem('userName', adminName);
+          await AsyncStorage.setItem('loginTime', new Date().toISOString());
+          
+          // Navigate to admin dashboard
+          router.replace('/(admin)');
+        } else {
+          Alert.alert('Error', 'Invalid admin credentials');
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Login failed. Please try again.');
       }
       
       setLoading(false);
     }, 1000);
-  };
-
-  const fillDemoCredentials = () => {
-    setEmail('admin@bharathi.com');
-    setPassword('admin123');
   };
 
   return (
@@ -115,13 +143,6 @@ export default function AdminLoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.demoButton}
-              onPress={fillDemoCredentials}
-            >
-              <Text style={styles.demoButtonText}>Use Demo Credentials</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={styles.loginButton}
               onPress={handleLogin}
               disabled={loading}
@@ -148,11 +169,14 @@ export default function AdminLoginScreen() {
             </View>
           </View>
 
-          {/* Demo Info */}
-          <View style={styles.demoInfo}>
-            <Text style={styles.demoTitle}>Demo Credentials:</Text>
-            <Text style={styles.demoText}>Email: admin@bharathi.com</Text>
-            <Text style={styles.demoText}>Password: admin123</Text>
+
+
+
+
+          {/* Contact Info */}
+          <View style={styles.contactInfo}>
+            <Text style={styles.contactTitle}>Need Help?</Text>
+            <Text style={styles.contactText}>Contact: admin@bharathienterprises.com</Text>
           </View>
         </View>
       </LinearGradient>
@@ -240,18 +264,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 12,
   },
-  demoButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  demoButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   loginButton: {
     backgroundColor: 'white',
     borderRadius: 12,
@@ -278,10 +290,27 @@ const styles = StyleSheet.create({
     marginTop: 5,
     textAlign: 'center',
   },
+  contactInfo: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  contactTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  contactText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    marginBottom: 4,
+  },
   demoInfo: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 20,
   },
   demoTitle: {
     color: 'white',
@@ -294,4 +323,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 4,
   },
+
 }); 

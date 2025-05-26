@@ -35,6 +35,8 @@ export default function LandingScreen() {
               <TouchableOpacity 
                 style={styles.hiddenAccess}
                 onPress={() => router.push('/(auth)/admin-login')}
+                testID="admin-access-button"
+                activeOpacity={0.7}
               >
                 <Text style={styles.hiddenAccessText}>Admin Access</Text>
               </TouchableOpacity>
@@ -42,6 +44,8 @@ export default function LandingScreen() {
               <TouchableOpacity 
                 style={styles.hiddenAccess}
                 onPress={() => router.push('/(auth)/delivery-login')}
+                testID="delivery-access-button"
+                activeOpacity={0.7}
               >
                 <Text style={styles.hiddenAccessText}>Delivery Access</Text>
               </TouchableOpacity>
@@ -55,6 +59,8 @@ export default function LandingScreen() {
             <TouchableOpacity 
               style={[styles.roleCard, styles.customerCard]}
               onPress={() => handleRoleSelection('customer')}
+              testID="start-shopping-button"
+              activeOpacity={0.8}
             >
               <LinearGradient
                 colors={['#10b981', '#059669']}

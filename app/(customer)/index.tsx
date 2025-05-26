@@ -157,7 +157,10 @@ export default function CustomerHome() {
   };
 
   const renderCategory = ({ item }: { item: Category }) => (
-    <TouchableOpacity style={styles.categoryCard}>
+    <TouchableOpacity 
+      style={styles.categoryCard}
+      onPress={() => router.push(`/(customer)/search?category=${item.name}`)}
+    >
       <View style={[styles.categoryIcon, { backgroundColor: item.color }]}>
         <Ionicons name={item.icon as any} size={20} color="white" />
       </View>

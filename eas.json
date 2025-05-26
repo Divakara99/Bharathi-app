@@ -1,18 +1,25 @@
 {
   "cli": {
-    "version": ">= 8.0.0"
+    "version": ">= 13.2.1",
+    "appVersionSource": "local"
   },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
     "preview": {
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "buildType": "apk"
       }
     },
     "production": {
       "android": {
-        "buildType": "aab"
+        "buildType": "app-bundle"
       }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }

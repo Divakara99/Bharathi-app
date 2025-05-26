@@ -1,0 +1,36 @@
+🚨 QUICK ANDROID STUDIO TROUBLESHOOTING 🚨
+
+PROBLEM: "Gradle sync failed"
+SOLUTION: 
+- Click "Try Again" 
+- If still fails: File > Invalidate Caches and Restart
+
+PROBLEM: "SDK not found"
+SOLUTION:
+- File > Settings > Android SDK
+- Make sure Android SDK is checked/installed
+- Click Apply
+
+PROBLEM: "Build failed"
+SOLUTION:
+- Build > Clean Project
+- Then: Build > Rebuild Project
+
+PROBLEM: Android Studio won't open project
+SOLUTION:
+- Make sure you selected the "android" folder
+- Not the main "ap30app" folder
+
+PROBLEM: Can't find APK file
+SOLUTION:
+- Look in: android\app\build\outputs\apk\debug\
+- File name: app-debug.apk
+
+🎯 FASTEST OPTION: 
+Check your EAS build at: https://expo.dev/accounts/akhildivakara/projects/ap30/builds
+It might be done by now!
+
+📱 INSTALL ON PHONE:
+1. Copy APK to phone
+2. Settings > Security > Enable "Unknown Sources"
+3. Tap APK file to install 

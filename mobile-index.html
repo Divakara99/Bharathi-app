@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>BHARATHI ENTERPRISES</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- Mobile Touch Fix CSS -->
+    <style>
+        /* Mobile Touch Fix for BHARATHI ENTERPRISES APK */
+        
+        /* Enable touch events and proper highlighting */
+        * {
+            -webkit-tap-highlight-color: rgba(124, 58, 237, 0.3) !important;
+            -webkit-touch-callout: default !important;
+            -webkit-user-select: auto !important;
+            user-select: auto !important;
+            touch-action: manipulation !important;
+        }
+        
+        /* Fix button and touchable elements */
+        button, 
+        [role="button"],
+        .css-9pa8cd,
+        [data-testid*="button"],
+        [onPress],
+        [onClick] {
+            -webkit-tap-highlight-color: rgba(124, 58, 237, 0.3) !important;
+            touch-action: manipulation !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            -webkit-touch-callout: default !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
+            min-height: 44px !important;
+            min-width: 44px !important;
+        }
+        
+        /* Fix input elements */
+        input, 
+        textarea, 
+        [contenteditable] {
+            -webkit-tap-highlight-color: rgba(124, 58, 237, 0.2) !important;
+            touch-action: manipulation !important;
+            -webkit-touch-callout: default !important;
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            pointer-events: auto !important;
+        }
+        
+        /* Fix TouchableOpacity elements */
+        [data-testid*="touchable"],
+        [data-testid*="pressable"],
+        [data-testid*="login"],
+        [data-testid*="signin"],
+        [data-testid*="submit"],
+        [data-testid*="role"],
+        [data-testid*="customer"],
+        [data-testid*="admin"],
+        [data-testid*="delivery"],
+        [data-testid*="back"],
+        [data-testid*="nav"],
+        [data-testid*="start-shopping"],
+        [data-testid*="access"] {
+            -webkit-tap-highlight-color: rgba(124, 58, 237, 0.3) !important;
+            touch-action: manipulation !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            min-height: 44px !important;
+            min-width: 44px !important;
+        }
+        
+        /* Ensure proper viewport for mobile */
+        html {
+            -webkit-text-size-adjust: 100% !important;
+            -ms-text-size-adjust: 100% !important;
+            touch-action: manipulation !important;
+        }
+        
+        body {
+            -webkit-touch-callout: default !important;
+            -webkit-user-select: auto !important;
+            user-select: auto !important;
+            touch-action: manipulation !important;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        #root {
+            height: 100%;
+            display: flex;
+        }
+        
+        /* Fix for React Native Web elements */
+        .css-9pa8cd {
+            pointer-events: auto !important;
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: rgba(124, 58, 237, 0.3) !important;
+        }
+        
+        /* Fix for gradient buttons */
+        [style*="linear-gradient"] {
+            -webkit-tap-highlight-color: rgba(124, 58, 237, 0.3) !important;
+            touch-action: manipulation !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+        }
+        
+        /* Fix for iOS Safari specific issues */
+        @supports (-webkit-touch-callout: none) {
+            * {
+                -webkit-tap-highlight-color: rgba(124, 58, 237, 0.3) !important;
+                -webkit-touch-callout: default !important;
+            }
+        }
+        
+        /* Fix for Android WebView specific issues */
+        @media screen and (-webkit-min-device-pixel-ratio: 0) {
+            * {
+                -webkit-tap-highlight-color: rgba(124, 58, 237, 0.3) !important;
+                touch-action: manipulation !important;
+            }
+        }
+    </style>
+    
+    <!-- Expo Reset Styles -->
+    <style id="expo-reset">
+        #root, body, html { height: 100% }
+        body { overflow: hidden }
+        #root { display: flex }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <!-- Mobile Touch Event Handler -->
+    <script>
+        // Ensure touch events work properly on mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add touch event listeners to all clickable elements
+            const clickableElements = document.querySelectorAll('[data-testid*="button"], [data-testid*="login"], [data-testid*="role"], [data-testid*="access"], [data-testid*="start-shopping"]');
+            
+            clickableElements.forEach(element => {
+                // Add visual feedback for touch
+                element.addEventListener('touchstart', function() {
+                    this.style.opacity = '0.7';
+                }, { passive: true });
+                
+                element.addEventListener('touchend', function() {
+                    this.style.opacity = '1';
+                }, { passive: true });
+                
+                element.addEventListener('touchcancel', function() {
+                    this.style.opacity = '1';
+                }, { passive: true });
+            });
+            
+            // Prevent zoom on double tap
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function (event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+            
+            // Improve touch responsiveness
+            document.addEventListener('touchstart', function() {}, { passive: true });
+        });
+    </script>
+</body>
+</html> 

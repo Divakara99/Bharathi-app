@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download BHARATHI ENTERPRISES App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px;
+            transition: transform 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .download-btn.disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        .status.building {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .instructions {
+            text-align: left;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .qr-code {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .app-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">BE</div>
+        <h1>BHARATHI ENTERPRISES</h1>
+        <p class="subtitle">Mobile App for Android</p>
+        
+        <div class="status building" id="status">
+            🔄 Building your app... Please wait
+        </div>
+        
+        <div class="app-info">
+            <div class="info-item">
+                <div class="info-label">Version</div>
+                <div class="info-value">1.0.0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Size</div>
+                <div class="info-value">~25 MB</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Platform</div>
+                <div class="info-value">Android 5.0+</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Updated</div>
+                <div class="info-value">Today</div>
+            </div>
+        </div>
+        
+        <!-- Replace these URLs with your actual build URLs when ready -->
+        <a href="#" class="download-btn disabled" id="downloadBtn">
+            📱 Download APK
+        </a>
+        
+        <div class="instructions">
+            <h3>📋 Installation Instructions</h3>
+            <ol>
+                <li><strong>Enable Unknown Sources:</strong> Go to Settings > Security > Unknown Sources and enable it</li>
+                <li><strong>Download:</strong> Click the download button above</li>
+                <li><strong>Install:</strong> Open the downloaded APK file and tap "Install"</li>
+                <li><strong>Open:</strong> Find "BHARATHI ENTERPRISES" in your app drawer</li>
+            </ol>
+        </div>
+        
+        <div class="qr-code" style="display: none;" id="qrCode">
+            <h3>📱 Scan QR Code</h3>
+            <p>Scan this QR code with your phone to download directly</p>
+            <!-- QR code will be generated here -->
+        </div>
+        
+        <script>
+            // Function to check build status
+            function checkBuildStatus() {
+                // You can replace this with actual API calls to check EAS build status
+                // For now, we'll simulate the build completion
+                setTimeout(() => {
+                    document.getElementById('status').innerHTML = '✅ App ready for download!';
+                    document.getElementById('status').className = 'status ready';
+                    
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    downloadBtn.classList.remove('disabled');
+                    downloadBtn.href = 'https://expo.dev/accounts/akhildivakara/projects/ap30/builds/latest'; // Replace with actual URL
+                    
+                    document.getElementById('qrCode').style.display = 'block';
+                }, 5000); // Simulate 5 second build time
+            }
+            
+            // Start checking build status
+            checkBuildStatus();
+            
+            // Add click handler for download button
+            document.getElementById('downloadBtn').addEventListener('click', function(e) {
+                if (this.classList.contains('disabled')) {
+                    e.preventDefault();
+                    alert('App is still building. Please wait...');
+                }
+            });
+        </script>
+    </div>
+</body>
+</html> 

@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { USER_CREDENTIALS } from '../../config/auth';
 
 export default function DeliveryLoginScreen() {
   const [email, setEmail] = useState('');
@@ -30,30 +31,34 @@ export default function DeliveryLoginScreen() {
 
     // Simulate API call
     setTimeout(async () => {
-      if (email === 'delivery@bharathi.com' && password === 'delivery123') {
+      const deliveryPerson = USER_CREDENTIALS.delivery.find(
+        user => user.email === email && user.password === password
+      );
+      
+      if (deliveryPerson) {
         // Store user data
         await AsyncStorage.setItem('userRole', 'delivery');
         await AsyncStorage.setItem('userEmail', email);
+        await AsyncStorage.setItem('userName', deliveryPerson.name);
+        await AsyncStorage.setItem('userPhone', deliveryPerson.phone);
+        await AsyncStorage.setItem('userArea', deliveryPerson.area);
+        await AsyncStorage.setItem('userVehicle', deliveryPerson.vehicle);
+        await AsyncStorage.setItem('loginTime', new Date().toISOString());
         
         // Navigate to delivery dashboard
         router.replace('/(delivery)');
       } else {
-        Alert.alert('Error', 'Invalid credentials');
+        Alert.alert('Error', 'Invalid email or password');
       }
       
       setLoading(false);
     }, 1000);
   };
 
-  const fillDemoCredentials = () => {
-    setEmail('delivery@bharathi.com');
-    setPassword('delivery123');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <LinearGradient colors={['#f97316', '#ea580c']} style={styles.gradient}>
+      <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.gradient}>
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
@@ -69,14 +74,8 @@ export default function DeliveryLoginScreen() {
                 <Ionicons name="bicycle" size={50} color="white" />
               </View>
               <Text style={styles.title}>Delivery Partner</Text>
-              <Text style={styles.subtitle}>Welcome to BHARATHI ENTERPRISES</Text>
-              <Text style={styles.tagline}>Earn while delivering fresh groceries</Text>
-              
-              {/* Earnings Badge */}
-              <View style={styles.earningsBadge}>
-                <Ionicons name="cash" size={16} color="#f97316" />
-                <Text style={styles.earningsText}>Earn ₹500+ daily</Text>
-              </View>
+              <Text style={styles.subtitle}>BHARATHI ENTERPRISES</Text>
+              <Text style={styles.tagline}>Fast & Reliable Delivery Service</Text>
             </View>
           </View>
 
@@ -86,7 +85,7 @@ export default function DeliveryLoginScreen() {
               <Ionicons name="mail" size={20} color="rgba(255,255,255,0.7)" />
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder="Delivery Partner Email"
                 placeholderTextColor="rgba(255,255,255,0.7)"
                 value={email}
                 onChangeText={setEmail}
@@ -115,19 +114,12 @@ export default function DeliveryLoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.demoButton}
-              onPress={fillDemoCredentials}
-            >
-              <Text style={styles.demoButtonText}>Use Demo Credentials</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={styles.loginButton}
               onPress={handleLogin}
               disabled={loading}
             >
               <Text style={styles.loginButtonText}>
-                {loading ? 'Signing In...' : 'Start Delivering'}
+                {loading ? 'Signing In...' : 'Start Delivery'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -135,24 +127,26 @@ export default function DeliveryLoginScreen() {
           {/* Features */}
           <View style={styles.features}>
             <View style={styles.feature}>
-              <Ionicons name="flash" size={20} color="white" />
-              <Text style={styles.featureText}>Flexible hours</Text>
+              <Ionicons name="map" size={20} color="white" />
+              <Text style={styles.featureText}>Route Tracking</Text>
             </View>
             <View style={styles.feature}>
-              <Ionicons name="wallet" size={20} color="white" />
-              <Text style={styles.featureText}>Daily payments</Text>
+              <Ionicons name="time" size={20} color="white" />
+              <Text style={styles.featureText}>Real-time Updates</Text>
             </View>
             <View style={styles.feature}>
-              <Ionicons name="shield-checkmark" size={20} color="white" />
-              <Text style={styles.featureText}>Insurance coverage</Text>
+              <Ionicons name="cash" size={20} color="white" />
+              <Text style={styles.featureText}>Earnings Tracker</Text>
             </View>
           </View>
 
-          {/* Demo Info */}
-          <View style={styles.demoInfo}>
-            <Text style={styles.demoTitle}>Demo Credentials:</Text>
-            <Text style={styles.demoText}>Email: delivery@bharathi.com</Text>
-            <Text style={styles.demoText}>Password: delivery123</Text>
+
+
+          {/* Contact Info */}
+          <View style={styles.contactInfo}>
+            <Text style={styles.contactTitle}>Need Help?</Text>
+            <Text style={styles.contactText}>Contact Support: +91 80 1234 5678</Text>
+            <Text style={styles.contactText}>Email: support@bharathienterprises.com</Text>
           </View>
         </View>
       </LinearGradient>
@@ -207,20 +201,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: 16,
   },
-  earningsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  earningsText: {
-    color: '#f97316',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 4,
-  },
   form: {
     flex: 1,
   },
@@ -238,18 +218,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     marginLeft: 12,
-  },
-  demoButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  demoButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
   },
   loginButton: {
     backgroundColor: 'white',
@@ -277,10 +245,27 @@ const styles = StyleSheet.create({
     marginTop: 5,
     textAlign: 'center',
   },
+  contactInfo: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  contactTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  contactText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    marginBottom: 4,
+  },
   demoInfo: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 20,
   },
   demoTitle: {
     color: 'white',

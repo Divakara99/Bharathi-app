@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
+import { locationService, STORE_LOCATION, MAX_DELIVERY_RADIUS } from '../../services/locationService';
 
 interface DeliveryOrder {
   id: string;
@@ -36,6 +37,14 @@ export default function DeliveryDashboard() {
     deliveries: 12,
     avgEarning: 71,
     hoursWorked: 8,
+  });
+
+  // Location tracking state
+  const [locationStatus, setLocationStatus] = useState({
+    isTracking: false,
+    distanceFromStore: 0,
+    isEligibleForOrders: false,
+    lastUpdate: null as Date | null,
   });
 
   const [availableOrders, setAvailableOrders] = useState<DeliveryOrder[]>([
@@ -96,17 +105,15 @@ export default function DeliveryDashboard() {
   const alarmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentOrderIdRef = useRef<string | null>(null);
 
-  // Initialize audio
+  // Initialize audio and location
   useEffect(() => {
     const initializeAudio = async () => {
       try {
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           staysActiveInBackground: true,
-          interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
           playsInSilentModeIOS: true,
           shouldDuckAndroid: true,
-          interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
           playThroughEarpieceAndroid: false,
         });
       } catch (error) {
@@ -114,7 +121,15 @@ export default function DeliveryDashboard() {
       }
     };
 
+    const initializeLocation = async () => {
+      const userEmail = await AsyncStorage.getItem('userEmail');
+      if (userEmail && isOnline) {
+        await startLocationTracking();
+      }
+    };
+
     initializeAudio();
+    initializeLocation();
 
     return () => {
       if (sound) {
@@ -123,8 +138,77 @@ export default function DeliveryDashboard() {
       if (alarmTimeoutRef.current) {
         clearTimeout(alarmTimeoutRef.current);
       }
+      locationService.stopTracking();
     };
   }, []);
+
+  // Location tracking functions
+  const startLocationTracking = async () => {
+    try {
+      const userEmail = await AsyncStorage.getItem('userEmail');
+      if (!userEmail) return;
+
+      const success = await locationService.startTracking(userEmail);
+      if (success) {
+        setLocationStatus(prev => ({ ...prev, isTracking: true }));
+        
+        // Update location status every 30 seconds
+        const locationInterval = setInterval(async () => {
+          const currentLocation = locationService.getCurrentLocationData();
+          if (currentLocation) {
+            const distance = locationService.calculateDistance(
+              currentLocation.latitude,
+              currentLocation.longitude,
+              STORE_LOCATION.latitude,
+              STORE_LOCATION.longitude
+            );
+            
+            const isEligible = distance <= MAX_DELIVERY_RADIUS;
+            
+            setLocationStatus(prev => ({
+              ...prev,
+              distanceFromStore: distance,
+              isEligibleForOrders: isEligible,
+              lastUpdate: new Date(),
+            }));
+
+            // Filter orders based on eligibility
+            if (!isEligible && availableOrders.length > 0) {
+              setAvailableOrders([]);
+              Alert.alert(
+                '📍 Location Alert',
+                `You are ${distance.toFixed(1)}km from the store. Orders are only available within ${MAX_DELIVERY_RADIUS}km radius.`,
+                [{ text: 'OK' }]
+              );
+            }
+          }
+        }, 30000);
+
+        return () => clearInterval(locationInterval);
+      } else {
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location services to receive delivery orders.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Settings', onPress: () => {/* Open settings */} }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error starting location tracking:', error);
+    }
+  };
+
+  const stopLocationTracking = async () => {
+    await locationService.stopTracking();
+    setLocationStatus({
+      isTracking: false,
+      distanceFromStore: 0,
+      isEligibleForOrders: false,
+      lastUpdate: null,
+    });
+  };
 
   // Create alarm sound
   const createAlarmSound = async () => {
@@ -375,17 +459,27 @@ export default function DeliveryDashboard() {
   };
 
   const toggleOnlineStatus = async () => {
+    const newStatus = !isOnline;
+    
     if (isOnline) {
       // Stop alarm when going offline
       await stopAlarm();
+      await stopLocationTracking();
+      const userEmail = await AsyncStorage.getItem('userEmail');
+      if (userEmail) {
+        await locationService.setPartnerOffline(userEmail);
+      }
+    } else {
+      // Start location tracking when going online
+      await startLocationTracking();
     }
     
-    setIsOnline(!isOnline);
+    setIsOnline(newStatus);
     Alert.alert(
-      isOnline ? 'Going Offline' : 'Going Online',
-      isOnline 
-        ? 'You will stop receiving new orders and any active alarms will stop.' 
-        : 'You will start receiving new orders with alarm notifications.'
+      newStatus ? 'Going Online' : 'Going Offline',
+      newStatus 
+        ? 'Location tracking started. You will receive orders when near the store.' 
+        : 'Location tracking stopped. You will not receive new orders.'
     );
   };
 
@@ -415,8 +509,8 @@ export default function DeliveryDashboard() {
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-              <Ionicons name="log-out-outline" size={24} color="white" />
-            </TouchableOpacity>
+            <Ionicons name="log-out-outline" size={24} color="white" />
+          </TouchableOpacity>
           </View>
         </View>
 
@@ -455,14 +549,50 @@ export default function DeliveryDashboard() {
             <Text style={styles.statValue}>₹{todayStats.avgEarning}</Text>
             <Text style={styles.statLabel}>Avg per Delivery</Text>
             <Ionicons name="trending-up" size={20} color="rgba(255,255,255,0.8)" />
-          </View>
+            </View>
           
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{todayStats.hoursWorked}h</Text>
             <Text style={styles.statLabel}>Hours Worked</Text>
             <Ionicons name="time" size={20} color="rgba(255,255,255,0.8)" />
-          </View>
+            </View>
         </ScrollView>
+
+        {/* Location Status */}
+        {isOnline && (
+          <View style={styles.locationStatus}>
+            <View style={styles.locationHeader}>
+              <Ionicons name="location" size={16} color="white" />
+              <Text style={styles.locationTitle}>Location Status</Text>
+            </View>
+            <View style={styles.locationInfo}>
+              <View style={styles.locationRow}>
+                <Text style={styles.locationLabel}>Distance from store:</Text>
+                <Text style={styles.locationValue}>
+                  {locationStatus.distanceFromStore > 0 
+                    ? `${locationStatus.distanceFromStore.toFixed(1)} km` 
+                    : 'Calculating...'}
+                </Text>
+              </View>
+              <View style={styles.locationRow}>
+                <Text style={styles.locationLabel}>Order eligibility:</Text>
+                <View style={[
+                  styles.eligibilityBadge,
+                  { backgroundColor: locationStatus.isEligibleForOrders ? '#10b981' : '#ef4444' }
+                ]}>
+                  <Text style={styles.eligibilityText}>
+                    {locationStatus.isEligibleForOrders ? 'ELIGIBLE' : 'TOO FAR'}
+                  </Text>
+                </View>
+              </View>
+              {!locationStatus.isEligibleForOrders && locationStatus.distanceFromStore > 0 && (
+                <Text style={styles.locationHint}>
+                  Move within {MAX_DELIVERY_RADIUS}km of the store to receive orders
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
@@ -504,26 +634,26 @@ export default function DeliveryDashboard() {
       </LinearGradient>
 
       <ScrollView style={styles.scrollContainer}>
-        {/* Available Orders */}
-        <View style={styles.ordersSection}>
+      {/* Available Orders */}
+      <View style={styles.ordersSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitleDark}>Available Orders</Text>
             <View style={styles.orderCount}>
               <Text style={styles.orderCountText}>{availableOrders.length}</Text>
             </View>
           </View>
-          
-          {!isOnline ? (
-            <View style={styles.offlineMessage}>
-              <Ionicons name="power" size={32} color="#9ca3af" />
-              <Text style={styles.offlineText}>Go online to see available orders</Text>
-            </View>
+        
+        {!isOnline ? (
+          <View style={styles.offlineMessage}>
+            <Ionicons name="power" size={32} color="#9ca3af" />
+            <Text style={styles.offlineText}>Go online to see available orders</Text>
+          </View>
           ) : availableOrders.length === 0 ? (
             <View style={styles.noOrdersMessage}>
               <Ionicons name="checkmark-circle" size={32} color="#10b981" />
               <Text style={styles.noOrdersText}>No new orders available</Text>
-            </View>
-          ) : (
+          </View>
+        ) : (
             availableOrders.map((order) => (
               <View key={order.id} style={[
                 styles.orderCard, 
@@ -566,9 +696,9 @@ export default function DeliveryDashboard() {
                     <Text style={styles.estimatedTime}>{order.estimatedTime} mins</Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.orderActions}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.rejectButton, isAlarmPlaying && currentOrderIdRef.current === order.id && styles.alarmButton]}
                     onPress={() => rejectOrder(order.id)}
                   >
@@ -576,7 +706,7 @@ export default function DeliveryDashboard() {
                     <Text style={styles.rejectButtonText}>Reject</Text>
                   </TouchableOpacity>
                   
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.acceptButton, isAlarmPlaying && currentOrderIdRef.current === order.id && styles.alarmAcceptButton]}
                     onPress={() => acceptOrder(order.id)}
                   >
@@ -669,8 +799,8 @@ export default function DeliveryDashboard() {
                         <Ionicons name="checkmark" size={14} color="white" />
                       </TouchableOpacity>
                     </>
-                  )}
-                </View>
+        )}
+      </View>
               </View>
             </View>
           ))}
@@ -1071,5 +1201,57 @@ const styles = StyleSheet.create({
   },
   deliveredButton: {
     backgroundColor: '#10b981',
+  },
+  // Location Status Styles
+  locationStatus: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  locationTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  locationInfo: {
+    gap: 8,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  locationLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+  },
+  locationValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  eligibilityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  eligibilityText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  locationHint: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 8,
+    textAlign: 'center',
   },
 }); 

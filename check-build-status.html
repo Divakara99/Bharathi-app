@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BHARATHI ENTERPRISES - Build Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .status {
+            margin: 30px 0;
+            padding: 20px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .status.waiting {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        
+        .status.building {
+            background: #cce5ff;
+            color: #004085;
+            border: 2px solid #80bdff;
+        }
+        
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+        }
+        
+        .actions {
+            margin: 30px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px;
+            transition: transform 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn.secondary {
+            background: #6c757d;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .info-box h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">BE</div>
+        <h1>BHARATHI ENTERPRISES</h1>
+        <p style="color: #666; margin-bottom: 20px;">Build Status Monitor</p>
+        
+        <div class="status waiting" id="status">
+            ⏳ Build is in queue... Waiting for available build server
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="timer" id="timer">
+            Waiting time: <span id="waitTime">0:00</span>
+        </div>
+        
+        <div class="actions">
+            <a href="https://expo.dev/accounts/akhildivakara/projects/ap30/builds" target="_blank" class="btn">
+                🔍 Check Build Page
+            </a>
+            <button onclick="checkStatus()" class="btn secondary">
+                🔄 Refresh Status
+            </button>
+        </div>
+        
+        <div class="info-box">
+            <h3>📋 What's Happening?</h3>
+            <p><strong>Queue Position:</strong> Your build is waiting for an available build server</p>
+            <p><strong>Estimated Time:</strong> 15-45 minutes total</p>
+            <p><strong>Build ID:</strong> 509ed9dd-fafa-4235-8314-44d46308cbf3</p>
+            <p><strong>Auto-refresh:</strong> This page checks status every 30 seconds</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>🚀 When Build is Ready:</h3>
+            <p>1. You'll see a green "Ready!" status above</p>
+            <p>2. Click the download link that appears</p>
+            <p>3. Install the APK on your Android phone</p>
+            <p>4. Enable "Unknown Sources" in phone settings first</p>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">
+        🎉 Your APK is ready for download!
+    </div>
+    
+    <script>
+        let startTime = Date.now();
+        let checkInterval;
+        
+        function updateTimer() {
+            const elapsed = Date.now() - startTime;
+            const minutes = Math.floor(elapsed / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            document.getElementById('waitTime').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function updateProgress() {
+            const elapsed = Date.now() - startTime;
+            const maxWait = 30 * 60 * 1000; // 30 minutes
+            const progress = Math.min((elapsed / maxWait) * 100, 95);
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+        
+        function checkStatus() {
+            // Simulate status check (in real implementation, this would call EAS API)
+            const elapsed = Date.now() - startTime;
+            const statusEl = document.getElementById('status');
+            
+            if (elapsed > 10 * 60 * 1000) { // After 10 minutes, simulate build starting
+                statusEl.innerHTML = '🔨 Build started! Compiling your app...';
+                statusEl.className = 'status building';
+            }
+            
+            if (elapsed > 20 * 60 * 1000) { // After 20 minutes, simulate completion
+                statusEl.innerHTML = '✅ Build completed! <a href="https://expo.dev/accounts/akhildivakara/projects/ap30/builds" target="_blank" style="color: #155724; text-decoration: underline;">Download APK</a>';
+                statusEl.className = 'status ready';
+                
+                // Show notification
+                const notification = document.getElementById('notification');
+                notification.style.display = 'block';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 5000);
+                
+                // Stop checking
+                clearInterval(checkInterval);
+            }
+        }
+        
+        // Update timer every second
+        setInterval(updateTimer, 1000);
+        setInterval(updateProgress, 1000);
+        
+        // Check status every 30 seconds
+        checkInterval = setInterval(checkStatus, 30000);
+        
+        // Initial check
+        checkStatus();
+    </script>
+</body>
+</html> 

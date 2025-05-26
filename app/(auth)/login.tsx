@@ -13,17 +13,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const DEMO_CREDENTIALS = {
-  customer: { email: 'customer@quickmart.com', password: 'customer123' },
-  admin: { email: 'admin@quickmart.com', password: 'admin123' },
-  delivery: { email: 'delivery@quickmart.com', password: 'delivery123' },
-};
+import { USER_CREDENTIALS, APP_CONFIG } from '../../config/auth';
 
 const ROLE_COLORS = {
-  customer: ['#10b981', '#059669'],
-  admin: ['#ef4444', '#dc2626'],
-  delivery: ['#f59e0b', '#d97706'],
+  customer: ['#10b981', '#059669'] as const,
+  admin: ['#ef4444', '#dc2626'] as const,
+  delivery: ['#f59e0b', '#d97706'] as const,
 };
 
 const ROLE_ICONS = {
@@ -32,6 +27,8 @@ const ROLE_ICONS = {
   delivery: 'bicycle',
 };
 
+type UserRole = 'customer' | 'admin' | 'delivery';
+
 export default function LoginScreen() {
   const { role } = useLocalSearchParams();
   const [email, setEmail] = useState('');
@@ -39,9 +36,25 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const roleKey = role as keyof typeof DEMO_CREDENTIALS;
+  const roleKey = role as UserRole;
   const colors = ROLE_COLORS[roleKey] || ROLE_COLORS.customer;
   const icon = ROLE_ICONS[roleKey] || ROLE_ICONS.customer;
+
+  const authenticateUser = (email: string, password: string, role: string) => {
+    if (role === 'admin') {
+      const admin = USER_CREDENTIALS.admin;
+      return admin.email === email && admin.password === password ? admin : null;
+    } else if (role === 'delivery') {
+      return USER_CREDENTIALS.delivery.find(
+        user => user.email === email && user.password === password
+      );
+    } else if (role === 'customer') {
+      return USER_CREDENTIALS.customers.find(
+        user => user.email === email && user.password === password
+      );
+    }
+    return null;
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -51,29 +64,26 @@ export default function LoginScreen() {
 
     setLoading(true);
 
-    // Simulate API call
+    // Simulate API call delay
     setTimeout(async () => {
-      const credentials = DEMO_CREDENTIALS[roleKey];
+      const user = authenticateUser(email, password, roleKey);
       
-      if (email === credentials.email && password === credentials.password) {
+      if (user) {
         // Store user data
         await AsyncStorage.setItem('userRole', roleKey);
         await AsyncStorage.setItem('userEmail', email);
+        await AsyncStorage.setItem('userName', user.name);
+        await AsyncStorage.setItem('userPhone', user.phone || '');
+        await AsyncStorage.setItem('loginTime', new Date().toISOString());
         
         // Navigate to appropriate dashboard
         router.replace(`/(${roleKey})`);
       } else {
-        Alert.alert('Error', 'Invalid credentials');
+        Alert.alert('Error', 'Invalid email or password');
       }
       
       setLoading(false);
     }, 1000);
-  };
-
-  const fillDemoCredentials = () => {
-    const credentials = DEMO_CREDENTIALS[roleKey];
-    setEmail(credentials.email);
-    setPassword(credentials.password);
   };
 
   return (
@@ -86,6 +96,8 @@ export default function LoginScreen() {
             <TouchableOpacity 
               style={styles.backButton}
               onPress={() => router.back()}
+              testID="back-button"
+              activeOpacity={0.7}
             >
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
@@ -95,6 +107,8 @@ export default function LoginScreen() {
               <TouchableOpacity 
                 style={[styles.roleTab, roleKey === 'customer' && styles.activeRoleTab]}
                 onPress={() => router.push('/(auth)/login?role=customer')}
+                testID="customer-role-tab"
+                activeOpacity={0.7}
               >
                 <Ionicons name="basket" size={18} color={roleKey === 'customer' ? '#1f2937' : 'rgba(255,255,255,0.7)'} />
                 <Text style={[styles.roleTabText, roleKey === 'customer' && styles.activeRoleTabText]}>
@@ -105,6 +119,8 @@ export default function LoginScreen() {
               <TouchableOpacity 
                 style={[styles.roleTab, roleKey === 'admin' && styles.activeRoleTab]}
                 onPress={() => router.push('/(auth)/login?role=admin')}
+                testID="admin-role-tab"
+                activeOpacity={0.7}
               >
                 <Ionicons name="settings" size={18} color={roleKey === 'admin' ? '#1f2937' : 'rgba(255,255,255,0.7)'} />
                 <Text style={[styles.roleTabText, roleKey === 'admin' && styles.activeRoleTabText]}>
@@ -115,6 +131,8 @@ export default function LoginScreen() {
               <TouchableOpacity 
                 style={[styles.roleTab, roleKey === 'delivery' && styles.activeRoleTab]}
                 onPress={() => router.push('/(auth)/login?role=delivery')}
+                testID="delivery-role-tab"
+                activeOpacity={0.7}
               >
                 <Ionicons name="bicycle" size={18} color={roleKey === 'delivery' ? '#1f2937' : 'rgba(255,255,255,0.7)'} />
                 <Text style={[styles.roleTabText, roleKey === 'delivery' && styles.activeRoleTabText]}>
@@ -157,7 +175,12 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity 
+                onPress={() => setShowPassword(!showPassword)}
+                testID="toggle-password"
+                activeOpacity={0.7}
+                style={styles.eyeButton}
+              >
                 <Ionicons 
                   name={showPassword ? "eye-off" : "eye"} 
                   size={20} 
@@ -167,16 +190,11 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.demoButton}
-              onPress={fillDemoCredentials}
-            >
-              <Text style={styles.demoButtonText}>Use Demo Credentials</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={styles.loginButton}
               onPress={handleLogin}
               disabled={loading}
+              testID="login-button"
+              activeOpacity={0.8}
             >
               <Text style={styles.loginButtonText}>
                 {loading ? 'Signing In...' : 'Sign In'}
@@ -184,11 +202,12 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Demo Info */}
-          <View style={styles.demoInfo}>
-            <Text style={styles.demoTitle}>Demo Credentials:</Text>
-            <Text style={styles.demoText}>Email: {DEMO_CREDENTIALS[roleKey].email}</Text>
-            <Text style={styles.demoText}>Password: {DEMO_CREDENTIALS[roleKey].password}</Text>
+          {/* Security Notice */}
+          <View style={styles.securityNotice}>
+            <Ionicons name="shield-checkmark" size={16} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.securityText}>
+              Secure Login - Contact admin for account access
+            </Text>
           </View>
         </View>
       </LinearGradient>
@@ -246,18 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 12,
   },
-  demoButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  demoButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   loginButton: {
     backgroundColor: 'white',
     borderRadius: 12,
@@ -313,5 +320,24 @@ const styles = StyleSheet.create({
   },
   activeRoleTabText: {
     color: '#1f2937',
+  },
+  securityNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+  },
+  securityText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  eyeButton: {
+    padding: 8,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

@@ -14,6 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { locationService, STORE_LOCATION, MAX_DELIVERY_RADIUS, DeliveryPartnerLocation } from '../../services/locationService';
 
 const { width } = Dimensions.get('window');
 
@@ -60,6 +62,19 @@ export default function AdminTrackAllScreen() {
   const [activeTab, setActiveTab] = useState<'orders' | 'delivery' | 'customers'>('orders');
   const [refreshing, setRefreshing] = useState(false);
   const [liveTracking, setLiveTracking] = useState(true);
+  const [deliveryPartnerLocations, setDeliveryPartnerLocations] = useState<DeliveryPartnerLocation[]>([]);
+
+  // Load delivery partner locations
+  const loadDeliveryPartnerLocations = async () => {
+    try {
+      const locations = await locationService.getEligiblePartners();
+      const allLocations = await AsyncStorage.getItem('deliveryPartnerLocations');
+      const allLocationData = allLocations ? JSON.parse(allLocations) : [];
+      setDeliveryPartnerLocations(allLocationData);
+    } catch (error) {
+      console.error('Error loading delivery partner locations:', error);
+    }
+  };
 
   const orders: Order[] = [
     {
@@ -190,10 +205,13 @@ export default function AdminTrackAllScreen() {
   ];
 
   useEffect(() => {
+    loadDeliveryPartnerLocations();
+    
     if (liveTracking) {
       const interval = setInterval(() => {
-        // Simulate real-time updates
+        // Simulate real-time updates and reload locations
         setRefreshing(true);
+        loadDeliveryPartnerLocations();
         setTimeout(() => setRefreshing(false), 1000);
       }, 30000); // Update every 30 seconds
 
@@ -256,57 +274,84 @@ export default function AdminTrackAllScreen() {
     </TouchableOpacity>
   );
 
-  const renderDeliveryPartnerCard = ({ item }: { item: DeliveryPartner }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      onPress={() => router.push(`/(admin)/partner-details?id=${item.id}`)}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.partnerHeaderInfo}>
-          <Text style={styles.partnerCardName}>{item.name}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+  const renderDeliveryPartnerCard = ({ item }: { item: DeliveryPartner }) => {
+    // Find location data for this partner
+    const locationData = deliveryPartnerLocations.find(loc => 
+      loc.partnerName === item.name || loc.partnerId === item.id
+    );
+
+    return (
+      <TouchableOpacity 
+        style={styles.card}
+        onPress={() => router.push(`/(admin)/partner-details?id=${item.id}`)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.partnerHeaderInfo}>
+            <Text style={styles.partnerCardName}>{item.name}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+              <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+            </View>
+          </View>
+          <View style={styles.ratingContainer}>
+            <Ionicons name="star" size={14} color="#fbbf24" />
+            <Text style={styles.rating}>{item.rating}</Text>
           </View>
         </View>
-        <View style={styles.ratingContainer}>
-          <Ionicons name="star" size={14} color="#fbbf24" />
-          <Text style={styles.rating}>{item.rating}</Text>
-        </View>
-      </View>
 
-      <View style={styles.partnerMeta}>
-        <View style={styles.metaRow}>
-          <Ionicons name="bicycle" size={16} color="#6b7280" />
-          <Text style={styles.vehicle}>{item.vehicle}</Text>
+        <View style={styles.partnerMeta}>
+          <View style={styles.metaRow}>
+            <Ionicons name="bicycle" size={16} color="#6b7280" />
+            <Text style={styles.vehicle}>{item.vehicle}</Text>
+          </View>
+          <TouchableOpacity style={styles.callIcon}>
+            <Ionicons name="call" size={14} color="#7c3aed" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.callIcon}>
-          <Ionicons name="call" size={14} color="#7c3aed" />
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.locationContainer}>
-        <Ionicons name="location" size={14} color="#6b7280" />
-        <Text style={styles.currentLocation}>{item.currentLocation}</Text>
-      </View>
+        <View style={styles.locationContainer}>
+          <Ionicons name="location" size={14} color="#6b7280" />
+          <Text style={styles.currentLocation}>{item.currentLocation}</Text>
+        </View>
 
-      {item.activeOrderId && (
-        <View style={styles.activeOrderContainer}>
-          <Text style={styles.activeOrderText}>Active Order: #{item.activeOrderId}</Text>
-        </View>
-      )}
+        {/* Location-based eligibility */}
+        {locationData && (
+          <View style={styles.locationEligibilityContainer}>
+            <View style={styles.distanceInfo}>
+              <Ionicons name="navigate" size={14} color="#6b7280" />
+              <Text style={styles.distanceText}>
+                {locationData.distanceFromStore.toFixed(1)}km from store
+              </Text>
+            </View>
+            <View style={[
+              styles.eligibilityBadge,
+              { backgroundColor: locationData.isEligibleForOrders ? '#10b981' : '#ef4444' }
+            ]}>
+              <Text style={styles.eligibilityText}>
+                {locationData.isEligibleForOrders ? 'ELIGIBLE' : 'TOO FAR'}
+              </Text>
+            </View>
+          </View>
+        )}
 
-      <View style={styles.statsContainer}>
-        <View style={styles.stat}>
-          <Text style={styles.statValue}>{item.totalDeliveries}</Text>
-          <Text style={styles.statLabel}>Total Deliveries</Text>
+        {item.activeOrderId && (
+          <View style={styles.activeOrderContainer}>
+            <Text style={styles.activeOrderText}>Active Order: #{item.activeOrderId}</Text>
+          </View>
+        )}
+
+        <View style={styles.statsContainer}>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>{item.totalDeliveries}</Text>
+            <Text style={styles.statLabel}>Total Deliveries</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>₹{item.earningsToday}</Text>
+            <Text style={styles.statLabel}>Today's Earnings</Text>
+          </View>
         </View>
-        <View style={styles.stat}>
-          <Text style={styles.statValue}>₹{item.earningsToday}</Text>
-          <Text style={styles.statLabel}>Today's Earnings</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderCustomerCard = ({ item }: { item: Customer }) => (
     <TouchableOpacity 
@@ -766,5 +811,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7c3aed',
     fontWeight: '600',
+  },
+  // Location-based styles
+  locationEligibilityContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+  },
+  distanceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  distanceText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 6,
+  },
+  eligibilityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  eligibilityText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 }); 

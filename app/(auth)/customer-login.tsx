@@ -13,91 +13,56 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { USER_CREDENTIALS } from '../../config/auth';
 
 export default function CustomerLoginScreen() {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    console.log('=== HANDLE LOGIN STARTED ===');
-    console.log('Phone Number:', phoneNumber);
-    console.log('Password:', password);
-    console.log('Current loading state:', loading);
-    
-    if (!phoneNumber || !password) {
-      console.log('ERROR: Missing fields');
+    if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    // Basic phone number validation (10 digits)
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      console.log('ERROR: Invalid phone number format');
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
-      return;
-    }
-
-    console.log('Validation passed, setting loading to true');
     setLoading(true);
+    console.log('Login attempt:', { email, password: '***' });
 
     // Simulate API call
     setTimeout(async () => {
-      console.log('=== API CALL SIMULATION ===');
-      console.log('Checking credentials...');
-      console.log('Expected phone: 9876543210');
-      console.log('Expected password: customer123');
-      console.log('Actual phone:', phoneNumber);
-      console.log('Actual password:', password);
-      
-      if (phoneNumber === '9876543210' && password === 'customer123') {
-        console.log('✅ Credentials match! Proceeding with login...');
-        try {
+      try {
+        const customer = USER_CREDENTIALS.customers.find(
+          user => user.email === email && user.password === password
+        );
+        
+        console.log('Customer found:', customer ? 'Yes' : 'No');
+        
+        if (customer) {
           // Store user data
           await AsyncStorage.setItem('userRole', 'customer');
-          await AsyncStorage.setItem('userPhone', phoneNumber);
-          console.log('✅ Data stored in AsyncStorage');
+          await AsyncStorage.setItem('userEmail', email);
+          await AsyncStorage.setItem('userName', customer.name);
+          await AsyncStorage.setItem('userPhone', customer.phone);
+          await AsyncStorage.setItem('userAddress', customer.address);
+          await AsyncStorage.setItem('loginTime', new Date().toISOString());
+          
+          console.log('User data stored, navigating to dashboard...');
           
           // Navigate to customer dashboard
-          console.log('🚀 Navigating to customer dashboard...');
           router.replace('/(customer)');
-        } catch (error) {
-          console.error('❌ Error during login process:', error);
-          Alert.alert('Error', 'Login failed. Please try again.');
+        } else {
+          console.log('Login failed - invalid credentials');
+          Alert.alert('Error', 'Invalid email or password');
         }
-      } else {
-        console.log('❌ Credentials do not match!');
-        Alert.alert('Error', 'Invalid phone number or password');
+      } catch (error) {
+        console.error('Login error:', error);
+        Alert.alert('Error', 'Login failed. Please try again.');
       }
       
-      console.log('Setting loading to false');
       setLoading(false);
     }, 1000);
-  };
-
-  const fillDemoCredentials = () => {
-    console.log('Demo credentials button clicked!');
-    setPhoneNumber('9876543210');
-    setPassword('customer123');
-    console.log('Demo credentials filled');
-  };
-
-  const testLogin = () => {
-    console.log('=== BUTTON CLICKED ===');
-    console.log('Phone Number:', phoneNumber);
-    console.log('Password:', password);
-    console.log('Loading state:', loading);
-    
-    if (!phoneNumber || !password) {
-      console.log('Missing fields detected');
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    console.log('Calling handleLogin...');
-    handleLogin();
   };
 
   return (
@@ -118,24 +83,24 @@ export default function CustomerLoginScreen() {
               <View style={styles.iconContainer}>
                 <Ionicons name="basket" size={50} color="white" />
               </View>
-              <Text style={styles.title}>Customer Login</Text>
-              <Text style={styles.subtitle}>Welcome to BHARATHI ENTERPRISES</Text>
-              <Text style={styles.tagline}>Shop Fresh Groceries with all Essential Daily Needs</Text>
+              <Text style={styles.title}>Customer Portal</Text>
+              <Text style={styles.subtitle}>BHARATHI ENTERPRISES</Text>
+              <Text style={styles.tagline}>Your Shopping Experience</Text>
             </View>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
             <View style={styles.inputContainer}>
-              <Ionicons name="call" size={20} color="rgba(255,255,255,0.7)" />
+              <Ionicons name="mail" size={20} color="rgba(255,255,255,0.7)" />
               <TextInput
                 style={styles.input}
-                placeholder="Phone Number"
+                placeholder="Email Address"
                 placeholderTextColor="rgba(255,255,255,0.7)"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                maxLength={10}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
             </View>
 
@@ -159,46 +124,39 @@ export default function CustomerLoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.demoButton}
-              onPress={fillDemoCredentials}
+              style={styles.loginButton}
+              onPress={handleLogin}
+              disabled={loading}
             >
-              <Text style={styles.demoButtonText}>Use Demo Credentials</Text>
-            </TouchableOpacity>
-
-            {/* Main Login Button */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: 'white',
-                padding: 20,
-                borderRadius: 12,
-                alignItems: 'center',
-                marginBottom: 10
-              }}
-              onPress={() => {
-                console.log('🚀 LOGIN BUTTON CLICKED!');
-                console.log('Phone:', phoneNumber);
-                console.log('Password:', password);
-                
-                if (phoneNumber === '9876543210' && password === 'customer123') {
-                  console.log('✅ Login successful!');
-                  router.replace('/(customer)');
-                } else {
-                  console.log('❌ Wrong credentials');
-                  alert('Please use: Phone: 9876543210, Password: customer123');
-                }
-              }}
-            >
-              <Text style={{ color: '#059669', fontSize: 18, fontWeight: 'bold' }}>
-                🛒 START SHOPPING
+              <Text style={styles.loginButtonText}>
+                {loading ? 'Signing In...' : 'Start Shopping'}
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Demo Info */}
-          <View style={styles.demoInfo}>
-            <Text style={styles.demoTitle}>Demo Credentials:</Text>
-            <Text style={styles.demoText}>Phone: 9876543210</Text>
-            <Text style={styles.demoText}>Password: customer123</Text>
+          {/* Features */}
+          <View style={styles.features}>
+            <View style={styles.feature}>
+              <Ionicons name="storefront" size={20} color="white" />
+              <Text style={styles.featureText}>Browse Products</Text>
+            </View>
+            <View style={styles.feature}>
+              <Ionicons name="card" size={20} color="white" />
+              <Text style={styles.featureText}>Easy Payments</Text>
+            </View>
+            <View style={styles.feature}>
+              <Ionicons name="bicycle" size={20} color="white" />
+              <Text style={styles.featureText}>Fast Delivery</Text>
+            </View>
+          </View>
+
+
+
+          {/* Registration Info */}
+          <View style={styles.registrationInfo}>
+            <Text style={styles.registrationTitle}>New Customer?</Text>
+            <Text style={styles.registrationText}>Contact us to create your account</Text>
+            <Text style={styles.registrationText}>📞 +91 80 1234 5678</Text>
           </View>
         </View>
       </LinearGradient>
@@ -270,22 +228,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 12,
   },
-  demoButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  loginButton: {
+    backgroundColor: 'white',
+    padding: 20,
     borderRadius: 12,
-    paddingVertical: 12,
     alignItems: 'center',
+    marginBottom: 10
+  },
+  loginButtonText: {
+    color: '#059669',
+    fontSize: 18,
+    fontWeight: 'bold'
+  },
+  features: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
   },
-  demoButtonText: {
+  feature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  featureText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
+    marginLeft: 8,
+  },
+  registrationInfo: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  registrationTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  registrationText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    marginBottom: 4,
   },
   demoInfo: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 20,
   },
   demoTitle: {
     color: 'white',
