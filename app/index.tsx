@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Link } from 'expo-router';
 
 export default function HomeScreen() {
   return (
@@ -8,17 +9,23 @@ export default function HomeScreen() {
       <Text style={styles.subtitle}>Mobile App</Text>
       
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Customer Login</Text>
-        </TouchableOpacity>
+        <Link href="/customer-login" asChild>
+          <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Customer Login</Text>
+          </TouchableOpacity>
+        </Link>
         
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Admin Login</Text>
-        </TouchableOpacity>
+        <Link href="/admin-login" asChild>
+          <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Admin Login</Text>
+          </TouchableOpacity>
+        </Link>
         
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Delivery Login</Text>
-        </TouchableOpacity>
+        <Link href="/delivery-login" asChild>
+          <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Delivery Login</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
       
       <Text style={styles.version}>Version 1.0.0</Text>
