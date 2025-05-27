@@ -2,15 +2,31 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Link } from 'expo-router';
 
+// Predefined delivery credentials
+const DELIVERY_CREDENTIALS = [
+  { username: 'delivery1', password: 'del123', name: 'Ravi Kumar', vehicle: 'Bike-001' },
+  { username: 'delivery2', password: 'del456', name: 'Suresh Singh', vehicle: 'Bike-002' },
+  { username: 'delivery3', password: 'del789', name: 'Mohan Lal', vehicle: 'Van-001' },
+];
+
 export default function DeliveryLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    if (username && password) {
-      Alert.alert('Success', `Welcome Delivery Partner ${username}! Login successful.`);
-    } else {
+    if (!username || !password) {
       Alert.alert('Error', 'Please enter both username and password');
+      return;
+    }
+
+    const user = DELIVERY_CREDENTIALS.find(
+      cred => cred.username === username && cred.password === password
+    );
+
+    if (user) {
+      Alert.alert('Success', `Welcome ${user.name}! Vehicle: ${user.vehicle}. Ready for deliveries!`);
+    } else {
+      Alert.alert('Error', 'Invalid delivery credentials. Please check the credentials below.');
     }
   };
 
@@ -18,6 +34,15 @@ export default function DeliveryLogin() {
     <View style={styles.container}>
       <Text style={styles.title}>BHARATHI ENTERPRISES</Text>
       <Text style={styles.subtitle}>Delivery Login</Text>
+      
+      <View style={styles.credentialsBox}>
+        <Text style={styles.credentialsTitle}>Delivery Credentials:</Text>
+        {DELIVERY_CREDENTIALS.map((cred, index) => (
+          <Text key={index} style={styles.credentialText}>
+            {cred.username} / {cred.password} ({cred.name} - {cred.vehicle})
+          </Text>
+        ))}
+      </View>
       
       <View style={styles.formContainer}>
         <TextInput
@@ -66,8 +91,27 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 20,
     color: '#28A745',
-    marginBottom: 40,
+    marginBottom: 20,
     fontWeight: '600',
+  },
+  credentialsBox: {
+    backgroundColor: '#E8F5E8',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    width: '100%',
+    maxWidth: 300,
+  },
+  credentialsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#28A745',
+    marginBottom: 8,
+  },
+  credentialText: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 2,
   },
   formContainer: {
     width: '100%',

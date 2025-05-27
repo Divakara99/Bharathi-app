@@ -2,15 +2,31 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Link } from 'expo-router';
 
+// Predefined admin credentials
+const ADMIN_CREDENTIALS = [
+  { username: 'admin', password: 'admin123', name: 'Super Admin' },
+  { username: 'manager', password: 'manager456', name: 'Store Manager' },
+  { username: 'supervisor', password: 'super789', name: 'Supervisor' },
+];
+
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    if (username && password) {
-      Alert.alert('Success', `Welcome Admin ${username}! Admin login successful.`);
-    } else {
+    if (!username || !password) {
       Alert.alert('Error', 'Please enter both username and password');
+      return;
+    }
+
+    const user = ADMIN_CREDENTIALS.find(
+      cred => cred.username === username && cred.password === password
+    );
+
+    if (user) {
+      Alert.alert('Success', `Welcome ${user.name}! Admin access granted.`);
+    } else {
+      Alert.alert('Error', 'Invalid admin credentials. Please check the credentials below.');
     }
   };
 
@@ -18,6 +34,15 @@ export default function AdminLogin() {
     <View style={styles.container}>
       <Text style={styles.title}>BHARATHI ENTERPRISES</Text>
       <Text style={styles.subtitle}>Admin Login</Text>
+      
+      <View style={styles.credentialsBox}>
+        <Text style={styles.credentialsTitle}>Admin Credentials:</Text>
+        {ADMIN_CREDENTIALS.map((cred, index) => (
+          <Text key={index} style={styles.credentialText}>
+            {cred.username} / {cred.password} ({cred.name})
+          </Text>
+        ))}
+      </View>
       
       <View style={styles.formContainer}>
         <TextInput
@@ -66,8 +91,27 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 20,
     color: '#FF6B35',
-    marginBottom: 40,
+    marginBottom: 20,
     fontWeight: '600',
+  },
+  credentialsBox: {
+    backgroundColor: '#FFF3E0',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    width: '100%',
+    maxWidth: 300,
+  },
+  credentialsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    marginBottom: 8,
+  },
+  credentialText: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 2,
   },
   formContainer: {
     width: '100%',

@@ -2,15 +2,31 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Link } from 'expo-router';
 
+// Predefined customer credentials
+const CUSTOMER_CREDENTIALS = [
+  { username: 'customer1', password: 'pass123', name: 'Rajesh Kumar' },
+  { username: 'customer2', password: 'pass456', name: 'Priya Sharma' },
+  { username: 'customer3', password: 'pass789', name: 'Amit Patel' },
+];
+
 export default function CustomerLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    if (username && password) {
-      Alert.alert('Success', `Welcome ${username}! Customer login successful.`);
-    } else {
+    if (!username || !password) {
       Alert.alert('Error', 'Please enter both username and password');
+      return;
+    }
+
+    const user = CUSTOMER_CREDENTIALS.find(
+      cred => cred.username === username && cred.password === password
+    );
+
+    if (user) {
+      Alert.alert('Success', `Welcome ${user.name}! Customer login successful.`);
+    } else {
+      Alert.alert('Error', 'Invalid username or password. Please check the credentials below.');
     }
   };
 
@@ -18,6 +34,15 @@ export default function CustomerLogin() {
     <View style={styles.container}>
       <Text style={styles.title}>BHARATHI ENTERPRISES</Text>
       <Text style={styles.subtitle}>Customer Login</Text>
+      
+      <View style={styles.credentialsBox}>
+        <Text style={styles.credentialsTitle}>Test Credentials:</Text>
+        {CUSTOMER_CREDENTIALS.map((cred, index) => (
+          <Text key={index} style={styles.credentialText}>
+            {cred.username} / {cred.password} ({cred.name})
+          </Text>
+        ))}
+      </View>
       
       <View style={styles.formContainer}>
         <TextInput
@@ -66,8 +91,27 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 20,
     color: '#007AFF',
-    marginBottom: 40,
+    marginBottom: 20,
     fontWeight: '600',
+  },
+  credentialsBox: {
+    backgroundColor: '#E3F2FD',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    width: '100%',
+    maxWidth: 300,
+  },
+  credentialsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 8,
+  },
+  credentialText: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 2,
   },
   formContainer: {
     width: '100%',
