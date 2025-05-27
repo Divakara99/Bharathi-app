@@ -65,6 +65,13 @@ export default function DeliveryLogin() {
           <Text style={styles.loginButtonText}>Delivery Login</Text>
         </TouchableOpacity>
         
+        <View style={styles.registerLinkContainer}>
+          <Text style={styles.registerLinkText}>New delivery partner? </Text>
+          <Link href="/delivery-register" style={styles.registerLink}>
+            <Text style={styles.registerLinkTextBlue}>Register here</Text>
+          </Link>
+        </View>
+        
         <Link href="/" style={styles.backLink}>
           <Text style={styles.backLinkText}>← Back to Home</Text>
         </Link>
@@ -137,6 +144,23 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  registerLinkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  registerLinkText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  registerLink: {
+    // No additional styles needed
+  },
+  registerLinkTextBlue: {
+    color: '#28A745',
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
   backLink: {
     alignItems: 'center',
