@@ -1,0 +1,21 @@
+🚀 GITHUB SETUP COMMANDS
+
+After creating your GitHub repository, run these commands:
+
+1. Add GitHub as remote origin:
+git remote add origin https://github.com/YOUR_USERNAME/bharathi-enterprises-app.git
+
+2. Push your code to GitHub:
+git branch -M main
+git push -u origin main
+
+3. Set up EAS Build with GitHub:
+npx eas build:configure
+
+4. Connect EAS to GitHub:
+npx eas build --platform android --profile preview --source-dir .
+
+REPLACE "YOUR_USERNAME" with your actual GitHub username!
+
+Example:
+git remote add origin https://github.com/akhildivakara/bharathi-enterprises-app.git 
