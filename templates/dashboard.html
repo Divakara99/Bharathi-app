@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="nav">
+    <a href="{{ url_for('index') }}">Home</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+</div>
+
+<h2>Dashboard - Welcome {{ user.name }}</h2>
+<p><strong>Email:</strong> {{ user.email }}</p>
+<p><strong>Balance:</strong> ${{ "%.2f"|format(user.balance) }}</p>
+
+<h3>Transfer Money</h3>
+<form id="transferForm">
+    <div>
+        <label for="to_email">To Email:</label><br>
+        <input type="email" id="to_email" name="to_email" required>
+    </div>
+    <div>
+        <label for="amount">Amount:</label><br>
+        <input type="number" id="amount" name="amount" step="0.01" min="0.01" required>
+    </div>
+    <div>
+        <button type="submit">Transfer</button>
+    </div>
+</form>
+
+<div id="transferResult"></div>
+
+<h3>All Customers</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Balance</th>
+            <th>Transaction Count</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in customers %}
+        <tr>
+            <td>{{ item.customer.name }}</td>
+            <td>{{ item.customer.email }}</td>
+            <td>${{ "%.2f"|format(item.customer.balance) }}</td>
+            <td>{{ item.transaction_count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+document.getElementById('transferForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        to_email: document.getElementById('to_email').value,
+        amount: document.getElementById('amount').value
+    };
+    
+    fetch('/transfer', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('transferResult');
+        if (data.success) {
+            resultDiv.innerHTML = '<div class="success">' + data.message + '</div>';
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            resultDiv.innerHTML = '<div class="error">Error: ' + data.error + '</div>';
+        }
+    })
+    .catch(error => {
+        document.getElementById('transferResult').innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+    });
+});
+</script>
+{% endblock %}
