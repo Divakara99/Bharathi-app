@@ -1,14 +1,15 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { Toaster } from 'react-hot-toast'
 import AuthProvider from '@/components/AuthProvider'
+import { Toaster } from 'react-hot-toast'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'BHARATHI ENTERPRISES - Delivery App',
-  description: 'A Zepto-like delivery app with real-time features by BHARATHI ENTERPRISES',
+  title: 'BHARATHI ENTERPRISES - Fast Delivery Service',
+  description: 'Your trusted delivery partner for fast, reliable, and secure deliveries',
 }
 
 export default function RootLayout({
@@ -19,19 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthProvider>
-          {children}
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-            }}
-          />
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            {children}
+            <Toaster position="top-right" />
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
