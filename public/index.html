@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BHARATHI ENTERPRISES - Zepto-like App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .btn-primary {
+            @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors;
+        }
+        .card {
+            @apply bg-white rounded-lg shadow-md p-6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">BHARATHI ENTERPRISES</h1>
+            <p class="text-xl text-gray-600">Your Zepto-like Delivery App</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Owner Section -->
+            <div class="card">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Owner Dashboard</h2>
+                <p class="text-gray-600 mb-6">Manage products, orders, and delivery partners</p>
+                <div class="space-y-3">
+                    <div class="p-3 bg-blue-50 rounded-lg">
+                        <strong>Login:</strong> Akhildivakara@gmail.com
+                    </div>
+                    <div class="p-3 bg-blue-50 rounded-lg">
+                        <strong>Password:</strong> 9959827826Dd@
+                    </div>
+                </div>
+                <button class="btn-primary w-full mt-6" onclick="alert('Owner dashboard would open here')">
+                    Access Owner Dashboard
+                </button>
+            </div>
+
+            <!-- Customer Section -->
+            <div class="card">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Customer Portal</h2>
+                <p class="text-gray-600 mb-6">Browse products, place orders, and track deliveries</p>
+                <div class="space-y-3">
+                    <div class="p-3 bg-green-50 rounded-lg">
+                        <strong>Features:</strong>
+                        <ul class="mt-2 text-sm">
+                            <li>• Browse products</li>
+                            <li>• Add to cart</li>
+                            <li>• Place orders</li>
+                            <li>• Track delivery</li>
+                        </ul>
+                    </div>
+                </div>
+                <button class="btn-primary w-full mt-6" onclick="alert('Customer portal would open here')">
+                    Start Shopping
+                </button>
+            </div>
+
+            <!-- Delivery Partner Section -->
+            <div class="card">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Delivery Partners</h2>
+                <p class="text-gray-600 mb-6">Manage deliveries and update order status</p>
+                <div class="space-y-3">
+                    <div class="p-3 bg-purple-50 rounded-lg">
+                        <strong>Features:</strong>
+                        <ul class="mt-2 text-sm">
+                            <li>• View assigned orders</li>
+                            <li>• Update delivery status</li>
+                            <li>• Collect payments</li>
+                            <li>• Location tracking</li>
+                        </ul>
+                    </div>
+                </div>
+                <button class="btn-primary w-full mt-6" onclick="alert('Delivery partner dashboard would open here')">
+                    Access Delivery Dashboard
+                </button>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="mt-16">
+            <h2 class="text-3xl font-bold text-center text-gray-900 mb-8">App Features</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🛒</span>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-2">Shopping Cart</h3>
+                    <p class="text-gray-600 text-sm">Add products with quantity controls</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">📱</span>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-2">Real-time Updates</h3>
+                    <p class="text-gray-600 text-sm">Live order tracking and notifications</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">💳</span>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-2">Payment Collection</h3>
+                    <p class="text-gray-600 text-sm">UPI and cash payment options</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">📍</span>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-2">Location Tracking</h3>
+                    <p class="text-gray-600 text-sm">Real-time delivery partner location</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deployment Info -->
+        <div class="mt-16 p-6 bg-gray-100 rounded-lg">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Deployment Options:</h3>
+            <div class="grid md:grid-cols-3 gap-4 text-sm">
+                <div>
+                    <strong>1. Vercel (Recommended):</strong>
+                    <p class="text-gray-600 mt-1">Drag your project folder to vercel.com</p>
+                </div>
+                <div>
+                    <strong>2. Netlify:</strong>
+                    <p class="text-gray-600 mt-1">Drag your project folder to netlify.com</p>
+                </div>
+                <div>
+                    <strong>3. GitHub Pages:</strong>
+                    <p class="text-gray-600 mt-1">Push to GitHub and enable Pages</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
