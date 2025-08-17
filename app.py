@@ -3,11 +3,12 @@ import sqlite3
 import hashlib
 import os
 import re
+import secrets
 
 app = Flask(__name__)
 
-# Bug 1: Hardcoded secret key - security vulnerability
-app.secret_key = "my_secret_key_123"
+# Secure secret key: read from env or generate a random secret
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
 # Fixed: SQL injection vulnerability
 def get_user_by_id(user_id):
@@ -28,8 +29,10 @@ def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), salt)
 
 def verify_password(password, hashed_password):
-    # FIXED: Secure password verification
+    # FIXED: Secure password verification with robust handling of stored type
     import bcrypt
+    if isinstance(hashed_password, str):
+        hashed_password = hashed_password.encode('utf-8')
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
 @app.route('/')
@@ -69,14 +72,14 @@ def login():
 def search_user():
     user_id = request.form.get('user_id')
     
-    # Bug 5: No input validation before SQL query
-    if user_id:
-        user = get_user_by_id(user_id)
+    # Validate that user_id is a positive integer before querying
+    if user_id and re.fullmatch(r"\d+", user_id):
+        user = get_user_by_id(int(user_id))
         if user:
             return f"User found: {user}"
         else:
             return "User not found"
-    return "Please provide user ID"
+    return "Invalid or missing user ID"
 
 @app.route('/api/users/<int:user_id>')
 def get_user_api(user_id):
@@ -101,5 +104,8 @@ def get_user_api(user_id):
     return jsonify({'error': 'User not found'}), 404
 
 if __name__ == '__main__':
-    # Bug 8: Running in debug mode in production
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Run server with configuration from environment; default to production-safe values
+    debug = os.environ.get('FLASK_DEBUG', '0') == '1'
+    host = os.environ.get('FLASK_RUN_HOST', '127.0.0.1')
+    port = int(os.environ.get('FLASK_RUN_PORT', '5000'))
+    app.run(debug=debug, host=host, port=port)

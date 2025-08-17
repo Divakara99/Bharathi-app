@@ -15,8 +15,9 @@ def setup_database():
         )
     ''')
     
-    # Insert sample user with bcrypt hashed password
-    password_hash = bcrypt.hashpw("password".encode('utf-8'), bcrypt.gensalt())
+    # Insert sample user with bcrypt hashed password as UTF-8 string
+    password_hash_bytes = bcrypt.hashpw("password".encode('utf-8'), bcrypt.gensalt())
+    password_hash = password_hash_bytes.decode('utf-8')
     cursor.execute('''
         INSERT OR REPLACE INTO users (id, username, email, password_hash)
         VALUES (1, 'admin', 'admin@example.com', ?)
