@@ -1,12 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configure for deployment
+  // Configure for Netlify deployment
   images: {
     unoptimized: true,
     domains: ['localhost', 'supabase.co'],
   },
-  // Disable static optimization completely
-  staticPageGenerationTimeout: 0,
   // Add environment variables directly
   env: {
     NEXT_PUBLIC_SUPABASE_URL: 'https://uspkxofsscqdptevvand.supabase.co',

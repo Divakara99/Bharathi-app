@@ -19,6 +19,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content="Your trusted delivery partner for fast, reliable, and secure deliveries" />
+        <title>BHARATHI ENTERPRISES - Fast Delivery Service</title>
+      </head>
       <body className={inter.className}>
         <ErrorBoundary>
           <AuthProvider>

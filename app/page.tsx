@@ -17,6 +17,14 @@ export default function HomePage() {
     return () => clearTimeout(timer)
   }, [])
 
+  const handleLogin = () => {
+    router.push('/auth/login')
+  }
+
+  const handleRegister = () => {
+    router.push('/auth/register')
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -45,7 +53,7 @@ export default function HomePage() {
               <h1 className="text-xl font-bold text-gray-800">BHARATHI ENTERPRISES</h1>
             </div>
             <button
-              onClick={() => router.push('/auth/login')}
+              onClick={handleLogin}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <LogIn className="w-4 h-4 mr-2" />
@@ -69,14 +77,14 @@ export default function HomePage() {
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => router.push('/auth/register')}
+              onClick={handleRegister}
               className="flex items-center justify-center px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <User className="w-5 h-5 mr-2" />
               Register as Customer
             </button>
             <button
-              onClick={() => router.push('/auth/register')}
+              onClick={handleRegister}
               className="flex items-center justify-center px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Truck className="w-5 h-5 mr-2" />

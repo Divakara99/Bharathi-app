@@ -6,35 +6,34 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:netlify": "SKIP_ENV_VALIDATION=true next build",
+    "build:netlify": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.3.0",
-    "@supabase/auth-helpers-nextjs": "^0.8.0",
-    "@supabase/auth-helpers-react": "^0.4.0",
-    "@supabase/supabase-js": "^2.38.0",
-    "autoprefixer": "^10.4.0",
+    "@hookform/resolvers": "^3.3.2",
+    "@supabase/auth-helpers-nextjs": "^0.8.7",
+    "@supabase/auth-helpers-react": "^0.4.2",
+    "@supabase/supabase-js": "^2.38.4",
+    "autoprefixer": "^10.4.16",
     "clsx": "^2.0.0",
-    "lucide-react": "^0.292.0",
+    "lucide-react": "^0.294.0",
     "next": "14.2.31",
-    "postcss": "^8.4.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-hook-form": "^7.47.0",
-    "react-hot-toast": "^2.4.0",
-    "tailwind-merge": "^2.0.0",
-    "tailwindcss": "^3.3.0",
-    "typescript": "^5.0.0",
-    "zod": "^3.22.0",
-    "zustand": "^4.4.0"
+    "postcss": "^8.4.32",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-hook-form": "^7.48.2",
+    "react-hot-toast": "^2.4.1",
+    "tailwindcss": "^3.3.6",
+    "zod": "^3.22.4",
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "@types/node": "^24.3.0",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
-    "eslint": "^8.0.0",
-    "eslint-config-next": "14.2.31"
+    "@types/node": "^20.10.4",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.17",
+    "eslint": "^8.55.0",
+    "eslint-config-next": "14.2.31",
+    "typescript": "^5.3.3"
   }
 }
