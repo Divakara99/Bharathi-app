@@ -1,38 +1,30 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import AuthProvider from '@/components/AuthProvider'
-import { Toaster } from 'react-hot-toast'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-
-const inter = Inter({ subsets: ['latin'] })
+import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'BHARATHI ENTERPRISES - Fast Delivery Service',
-  description: 'Your trusted delivery partner for fast, reliable, and secure deliveries',
-}
+  title: "Bharathi Enterprises · Delivery Monitor",
+  description: "Ekart vendor 15-day delivery cycle reports, totals and expenses.",
+  applicationName: "Bharathi Enterprises",
+  appleWebApp: {
+    capable: true,
+    title: "Bharathi",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#4338ca",
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="Your trusted delivery partner for fast, reliable, and secure deliveries" />
-        <title>BHARATHI ENTERPRISES - Fast Delivery Service</title>
-      </head>
-      <body className={inter.className}>
-        <ErrorBoundary>
-          <AuthProvider>
-            {children}
-            <Toaster position="top-right" />
-          </AuthProvider>
-        </ErrorBoundary>
-      </body>
+      <body className="bg-slate-100 text-slate-900 antialiased">{children}</body>
     </html>
-  )
+  );
 }
