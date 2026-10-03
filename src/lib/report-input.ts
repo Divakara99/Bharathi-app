@@ -1,57 +1,27 @@
-import { normalizeName } from "@/lib/employees";
 import { cycleDayRange } from "@/lib/report-period";
+import {
+  deliveryTotal, InputError, inputEmployeeName, inputInteger, inputMoney, inputNotes, inputObject,
+  MAX_DB_INTEGER, MAX_PRICE,
+} from "@/lib/input-validation";
 
-export const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-export const periodLabel = (year: number, month: number, cycle: number) =>
-  `${MONTH_NAMES[month - 1]} ${year} (${cycleDayRange(cycle, year, month)})`;
-
+export const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+export const periodLabel = (year: number, month: number, cycle: number) => `${MONTH_NAMES[month - 1]} ${year} (${cycleDayRange(cycle, year, month)})`;
 export type ReportInput = {
-  empName: string;
-  year: number;
-  month: number;
-  cycle: number;
-  deliveries: number;
-  pricePerDelivery: number;
-  notes: string | null;
+  empName: string; year: number; month: number; cycle: number; deliveries: number; pricePerDelivery: number; totalValue: string; notes: string | null;
 };
-
-export function parseReportInput(
-  body: unknown,
-): { ok: true; data: ReportInput } | { ok: false; error: string } {
-  const b = (body ?? {}) as Record<string, unknown>;
-  const empName = normalizeName(String(b.empName ?? ""));
-  const year = Number(b.year);
-  const month = Number(b.month);
-  const cycle = Number(b.cycle);
-  const deliveries = Number(b.deliveries ?? 0);
-  const pricePerDelivery = Number(b.pricePerDelivery ?? 0);
-  const notes = b.notes ? String(b.notes).slice(0, 300) : null;
-
-  if (!empName) return { ok: false, error: "Employee name is required" };
-  if (empName.length > 60) return { ok: false, error: "Employee name is too long" };
-  if (
-    !Number.isInteger(year) || year < 2000 || year > 2100 ||
-    !Number.isInteger(month) || month < 1 || month > 12 ||
-    (cycle !== 1 && cycle !== 2)
-  ) {
-    return { ok: false, error: "Invalid period" };
+export function parseReportInput(body: unknown): { ok: true; data: ReportInput } | { ok: false; error: string } {
+  try {
+    const value = inputObject(body);
+    const empName = inputEmployeeName(value.empName);
+    const year = inputInteger(value.year, "Year", 2000, 2100);
+    const month = inputInteger(value.month, "Month", 1, 12);
+    const cycle = inputInteger(value.cycle, "Cycle", 1, 2);
+    const deliveries = inputInteger(value.deliveries, "Deliveries", 0, MAX_DB_INTEGER);
+    const pricePerDelivery = inputMoney(value.pricePerDelivery, "Per delivery price", MAX_PRICE);
+    const totalValue = deliveryTotal(deliveries, pricePerDelivery);
+    const notes = inputNotes(value.notes);
+    return { ok: true, data: { empName, year, month, cycle, deliveries, pricePerDelivery, totalValue, notes } };
+  } catch (error) {
+    return { ok: false, error: error instanceof InputError ? error.message : "Enter a valid delivery record." };
   }
-  if (!Number.isFinite(deliveries) || !Number.isFinite(pricePerDelivery)) {
-    return { ok: false, error: "Enter valid numbers" };
-  }
-  if (deliveries < 0 || pricePerDelivery < 0) {
-    return { ok: false, error: "Values cannot be negative" };
-  }
-  if (!Number.isInteger(deliveries)) {
-    return { ok: false, error: "Deliveries must be a whole number" };
-  }
-
-  return {
-    ok: true,
-    data: { empName, year, month, cycle, deliveries, pricePerDelivery, notes },
-  };
 }

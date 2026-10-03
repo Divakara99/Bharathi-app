@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import FullExportDownloads from "@/components/full-export-downloads";
 import FinalReportShare from "@/components/final-report-share";
 import MonthRangeSelector from "@/components/month-range-selector";
+import InstallApp from "@/components/install-app";
 import { isInMonthRange, monthRangeLabel } from "@/lib/report-range";
 import { cycleDayRange as cycleLabel } from "@/lib/report-period";
 import { exportFilename } from "@/lib/export-filenames";
+import { csvCell } from "@/lib/csv";
 import {
   calculateTotals, employeeExpenses, employeeReports, employeeTotals, sameEmployeeName,
   type EmployeeRow as Employee, type ExpenseRow as Expense, type ReportRow as Report,
@@ -53,8 +55,7 @@ export default function Home() {
 
   const [expenseEmployee, setExpenseEmployee] = useState("");
   const [expenseMonth, setExpenseMonth] = useState(now.getMonth() + 1);
-  const [expenseAmount, setExpenseAmount] = useState("");
-  const [expenseNotes, setExpenseNotes] = useState("");
+  const [expenseDraft, setExpenseDraft] = useState<{ key: string; amount: string; notes: string } | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
   const [scopeName, setScopeName] = useState("");
   const [fromMonth, setFromMonth] = useState(1);
@@ -105,16 +106,23 @@ export default function Home() {
     setEmployees(data.employees);
     return data.employees;
   }, []);
-  useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    void loadEmployees().then((list) => {
+    let active = true;
+    void Promise.resolve().then(() => { if (active) return load(); });
+    return () => { active = false; };
+  }, [load]);
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => active ? loadEmployees() : null).then((list) => {
+      if (!active || !list) return;
       let saved = "";
       try { saved = localStorage.getItem(EMP_KEY) ?? ""; } catch {}
       const last = list.find((e) => sameEmployeeName(e.name, saved));
       if (last) setEmpName(last.name);
       if (list.length) setExpenseEmployee(String((last ?? list[0]).id));
       else setAddingEmp(true);
-    }).catch(() => showToast("Could not load employees. Please refresh.", false));
+    }).catch(() => { if (active) showToast("Could not load employees. Please refresh.", false); });
+    return () => { active = false; };
   }, [loadEmployees, showToast]);
 
   const go = (next: Tab) => {
@@ -127,34 +135,41 @@ export default function Home() {
   const visible = (name: Tab) => tab === name ? "" : "hidden md:block";
   const years = Array.from(new Set([...Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i), year])).sort((a, b) => a - b);
   const resetEntry = () => { setEditingId(null); setDeliveries(""); setPrice(""); setNotes(""); };
-  const changeYear = (value: number) => { setYear(value); resetEntry(); };
+  const changeYear = (value: number) => {
+    if (savingReport || savingExpense) return;
+    requestVersion.current += 1;
+    setLoading(true); setYear(value); resetEntry();
+  };
   const periodReports = reports.filter((r) => r.year === year && r.month === month && r.cycle === cycle);
   const duplicate = editingId === null && empName.trim() ? periodReports.find((r) => sameEmployeeName(r.empName, empName)) : undefined;
   const selectedEntryName = employees.find((e) => sameEmployeeName(e.name, empName))?.name ?? "";
   const entryTotal = (Number(deliveries) || 0) * (Number(price) || 0);
 
   const scopeEmployee = employees.find((e) => sameEmployeeName(e.name, scopeName));
-  const scopedReports = useMemo(() => scopeEmployee ? employeeReports(reports, scopeEmployee) : reports, [reports, scopeEmployee]);
-  const scopedExpenses = useMemo(() => scopeEmployee ? employeeExpenses(expenses, scopeEmployee) : expenses, [expenses, scopeEmployee]);
+  const currentReports = useMemo(() => reports.filter((row) => row.year === year), [reports, year]);
+  const currentExpenses = useMemo(() => expenses.filter((row) => row.year === year), [expenses, year]);
+  const scopedReports = useMemo(() => scopeEmployee ? employeeReports(currentReports, scopeEmployee) : currentReports, [currentReports, scopeEmployee]);
+  const scopedExpenses = useMemo(() => scopeEmployee ? employeeExpenses(currentExpenses, scopeEmployee) : currentExpenses, [currentExpenses, scopeEmployee]);
   const scopedTotals = useMemo(() => calculateTotals(scopedReports, scopedExpenses), [scopedReports, scopedExpenses]);
   const rangeReports = useMemo(() => scopedReports.filter((row) => isInMonthRange(row.month, reportRange)), [scopedReports, reportRange]);
   const rangeExpenses = useMemo(() => scopedExpenses.filter((row) => isInMonthRange(row.month, reportRange)), [scopedExpenses, reportRange]);
   const rangeTotals = useMemo(() => calculateTotals(rangeReports, rangeExpenses), [rangeReports, rangeExpenses]);
   const filteredReports = recordMonth ? scopedReports.filter((r) => r.month === Number(recordMonth)) : scopedReports;
   const filteredExpenses = recordMonth ? scopedExpenses.filter((e) => e.month === Number(recordMonth)) : scopedExpenses;
-  const staffStats = useMemo(() => employees.map((employee) => ({ employee, ...employeeTotals(reports, expenses, employee) })), [employees, reports, expenses]);
-  const generalExpenses = expenses.filter((e) => e.employeeId === null);
+  const staffStats = useMemo(() => employees.map((employee) => ({ employee, ...employeeTotals(currentReports, currentExpenses, employee) })), [employees, currentReports, currentExpenses]);
+  const generalExpenses = currentExpenses.filter((e) => e.employeeId === null);
 
   const storedExpense = useMemo(() => expenses.find((e) => e.year === year && e.month === expenseMonth &&
     (expenseEmployee === GENERAL ? e.employeeId === null : String(e.employeeId) === expenseEmployee)), [expenses, expenseMonth, expenseEmployee, year]);
-  useEffect(() => {
-    setExpenseAmount(storedExpense ? String(Number(storedExpense.amount)) : "");
-    setExpenseNotes(storedExpense?.notes ?? "");
-  }, [expenseEmployee, expenseMonth, year, storedExpense?.id, storedExpense?.amount, storedExpense?.notes]);
+  const expenseFormKey = `${year}:${expenseMonth}:${expenseEmployee}:${storedExpense?.id ?? "new"}`;
+  const expenseAmount = expenseDraft?.key === expenseFormKey ? expenseDraft.amount : storedExpense ? String(Number(storedExpense.amount)) : "";
+  const expenseNotes = expenseDraft?.key === expenseFormKey ? expenseDraft.notes : storedExpense?.notes ?? "";
+  const setExpenseAmount = (amount: string) => setExpenseDraft((current) => ({ key: expenseFormKey, amount, notes: current?.key === expenseFormKey ? current.notes : expenseNotes }));
+  const setExpenseNotes = (notes: string) => setExpenseDraft((current) => ({ key: expenseFormKey, amount: current?.key === expenseFormKey ? current.amount : expenseAmount, notes }));
   const formEmployee = employees.find((e) => String(e.id) === expenseEmployee);
-  const expenseMonthIncome = formEmployee ? calculateTotals(employeeReports(reports, formEmployee).filter((r) => r.month === expenseMonth), []).total : 0;
+  const expenseMonthIncome = formEmployee ? calculateTotals(employeeReports(currentReports, formEmployee).filter((r) => r.month === expenseMonth), []).total : 0;
   const expensePreviewNet = (Math.round(expenseMonthIncome * 100) - Math.round((Number(expenseAmount) || 0) * 100)) / 100;
-  const expenseHistory = expenseEmployee === GENERAL ? generalExpenses : formEmployee ? employeeExpenses(expenses, formEmployee) : expenses;
+  const expenseHistory = expenseEmployee === GENERAL ? generalExpenses : formEmployee ? employeeExpenses(currentExpenses, formEmployee) : currentExpenses;
 
   const months = useMemo(() => MONTHS.map((name, index) => {
     const monthNumber = index + 1;
@@ -192,7 +207,9 @@ export default function Home() {
       const { report: saved } = await api<{ report: Report }>(editingId ? `/api/reports/${editingId}` : "/api/reports", { ...jsonPost(payload), method: editingId ? "PATCH" : "POST" });
       try { localStorage.setItem(EMP_KEY, saved.empName); } catch {}
       const wasEditing = editingId !== null;
-      await Promise.all([load(), loadEmployees()]);
+      setReports((current) => [...current.filter((row) => row.id !== saved.id), saved]);
+      const [, staffRefresh] = await Promise.all([load(), loadEmployees().catch(() => null)]);
+      if (!staffRefresh) setLoadError("Report saved, but the employee list could not refresh. Tap Retry before sharing.");
       setEditingId(null); setDeliveries(""); setNotes(""); setAddingEmp(false);
       setEmpName(saved.empName);
       setScopeName(saved.empName);
@@ -211,9 +228,11 @@ export default function Home() {
     if (!expenseEmployee) { showToast("Select an employee for these expenses.", false); return; }
     setSavingExpense(true);
     try {
-      await api("/api/expenses", jsonPost({ employeeId: expenseEmployee === GENERAL ? null : Number(expenseEmployee), year, month: expenseMonth, amount: Number(expenseAmount), notes: expenseNotes }));
+      const { expense: saved } = await api<{ expense: Expense }>("/api/expenses", jsonPost({ employeeId: expenseEmployee === GENERAL ? null : Number(expenseEmployee), year, month: expenseMonth, amount: Number(expenseAmount), notes: expenseNotes }));
+      setExpenses((current) => [...current.filter((row) => row.id !== saved.id), saved]);
+      setExpenseDraft(null);
       await load();
-      setScopeName(formEmployee?.name ?? "");
+      setScopeName(saved.employeeName ?? "");
       setFromMonth((value) => Math.min(value, expenseMonth));
       setToMonth((value) => Math.max(value, expenseMonth));
       showToast(`${formEmployee?.name ?? "General business"} · ${MONTHS[expenseMonth - 1]} expenses saved ✅`);
@@ -228,7 +247,9 @@ export default function Home() {
     setAddingStaff(true);
     try {
       const saved = await api<{ employee: Employee }>("/api/employees", jsonPost({ name: newStaff.trim() }));
-      await loadEmployees(); setNewStaff("");
+      setEmployees((current) => [...current.filter((row) => row.id !== saved.employee.id), saved.employee]);
+      await loadEmployees().catch(() => { showToast("Employee added, but the list could not refresh.", false); });
+      setNewStaff("");
       if (!expenseEmployee) setExpenseEmployee(String(saved.employee.id));
       showToast(`${saved.employee.name} added ✅`);
     } catch (error) { showToast(error instanceof Error ? error.message : "Could not add employee.", false); }
@@ -274,11 +295,11 @@ export default function Home() {
       MONTHS.forEach((name, i) => {
         if (!isInMonthRange(i + 1, reportRange)) return;
         const totals = employeeTotals(rangeReports.filter((r) => r.month === i + 1), rangeExpenses.filter((e) => e.month === i + 1), employee);
-        table.push([employee.name, year, name, totals.deliveries, totals.total.toFixed(2), totals.expenses.toFixed(2), totals.net.toFixed(2)]);
+        table.push([employee.name, year, name, totals.deliveries, totals.total, totals.expenses, totals.net]);
       });
     }
-    if (!scopeEmployee) generalExpenses.filter((e) => isInMonthRange(e.month, reportRange)).forEach((e) => table.push(["General business expenses", year, MONTHS[e.month - 1], 0, "0.00", e.amount, (-Number(e.amount)).toFixed(2)]));
-    const csv = "\uFEFF" + table.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\r\n");
+    if (!scopeEmployee) generalExpenses.filter((e) => isInMonthRange(e.month, reportRange)).forEach((e) => table.push(["General business expenses", year, MONTHS[e.month - 1], 0, 0, Number(e.amount), -Number(e.amount)]));
+    const csv = "\uFEFF" + table.map((row) => row.map((cell, index) => csvCell(cell, index >= 4)).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const anchor = document.createElement("a"); anchor.href = url;
     anchor.download = exportFilename((scopeEmployee ? [scopeEmployee] : employees).map((employee) => employee.name), year, "csv", "Summary", reportRange);
@@ -294,17 +315,18 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:py-5">
           <div className="min-w-0"><h1 className="truncate text-lg font-bold tracking-tight md:text-3xl">Bharathi Enterprises</h1>
             <p className="text-xs text-indigo-100 md:text-sm">Ekart Delivery Monitor <span className="hidden md:inline">· Employee-wise delivery reports & monthly expenses</span></p></div>
-          <select aria-label="Report year" value={year} onChange={(e) => changeYear(Number(e.target.value))} className="h-11 shrink-0 rounded-lg border border-white/30 bg-white/15 px-2 text-base font-semibold text-white outline-none [&>option]:text-slate-900">
+          <select aria-label="Report year" disabled={savingReport || savingExpense} value={year} onChange={(e) => changeYear(Number(e.target.value))} className="h-11 shrink-0 rounded-lg border border-white/30 bg-white/15 px-2 text-base font-semibold text-white outline-none [&>option]:text-slate-900">
             {years.map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </div>
       </header>
       <div className="mx-auto max-w-6xl space-y-4 px-3 py-4 md:space-y-6 md:px-4 md:py-6">
-        {loadError && <div role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{loadError} <button onClick={() => void load()} className="ml-2 font-semibold underline">Retry</button></div>}
+        <InstallApp />
+        {loadError && <div role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{loadError} <button onClick={() => { void Promise.all([load(), loadEmployees()]).catch(() => setLoadError("Could not refresh the employee list. Please try again.")); }} className="ml-2 font-semibold underline">Retry</button></div>}
         <section id="screen-entry" className={`${visible("entry")} ${panelCls}`}>
           <h2 className="text-lg font-semibold">{editingId ? "Edit Cycle Report" : "New 15-Day Cycle Entry"}</h2>
           <p className="mb-4 mt-1 text-xs text-slate-500">Two entries per employee per month. Monthly expenses are entered separately.</p>
-          <form onSubmit={submitReport} className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+          <form onSubmit={submitReport} className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4"><fieldset disabled={savingReport} className="contents">
             <div className="col-span-2 md:col-span-1"><Field label="Employee">
               {addingEmp || !employees.length ? <div className="flex gap-2"><input required maxLength={60} value={empName} onChange={(e) => setEmpName(e.target.value)} placeholder="New employee name" className={inputCls} />
                 {!!employees.length && <button type="button" onClick={() => { setAddingEmp(false); setEmpName(""); }} className="shrink-0 rounded-lg bg-slate-200 px-3 text-sm font-semibold">List</button>}</div>
@@ -322,7 +344,7 @@ export default function Home() {
             {duplicate && <div className="col-span-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800 md:col-span-3">This employee already has {duplicate.deliveries} deliveries entered for this period. <button type="button" onClick={() => editReport(duplicate)} className="font-semibold underline">Edit it</button></div>}
             <div className="col-span-2 flex flex-col gap-2 md:col-span-3 md:flex-row"><button disabled={savingReport || !!duplicate} type="submit" className={primaryCls}>{savingReport ? "Saving…" : editingId ? "Update Report" : "Save Report"}</button>
               {editingId && <Action type="button" tone="slate" onClick={() => { resetEntry(); setEmpName(""); }}>Cancel</Action>}</div>
-          </form>
+          </fieldset></form>
           {!!employees.length && <div className="mt-5 border-t border-slate-100 pt-4"><div className="mb-3 flex flex-wrap justify-between gap-2"><h3 className="text-sm font-semibold">{MONTHS[month - 1]} {year} · {cycleLabel(cycle, year, month)}</h3><span className="text-xs text-slate-500">{employees.filter((e) => periodReports.some((r) => sameEmployeeName(r.empName, e.name))).length}/{employees.length} entered</span></div>
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{employees.map((employee) => { const saved = periodReports.find((r) => sameEmployeeName(r.empName, employee.name)); return <li key={employee.id}><button onClick={() => saved ? editReport(saved) : enterFor(employee)} className={`flex min-h-12 w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-sm ${saved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}><span className="min-w-0 truncate font-medium">{employee.name}</span><span className={`shrink-0 text-xs font-semibold ${saved ? "text-emerald-700" : "text-amber-700"}`}>{saved ? `✓ ${inr(Number(saved.totalValue))}` : "Pending"}</span></button></li>; })}</ul>
           </div>}
@@ -331,7 +353,7 @@ export default function Home() {
         <section id="screen-expenses" className={`${visible("expenses")} ${panelCls}`}>
           <h2 className="text-lg font-semibold">Employee Monthly Expenses</h2>
           <p className="mb-4 mt-1 text-xs text-slate-500">One entry per employee per month—not per 15-day cycle. Saving the same employee and month updates only that entry.</p>
-          <form onSubmit={submitExpense} className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+          <form onSubmit={submitExpense} className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4"><fieldset disabled={savingExpense} className="contents">
             <div className="col-span-2 md:col-span-1"><Field label="Expense employee"><select required value={expenseEmployee} onChange={(e) => setExpenseEmployee(e.target.value)} className={inputCls}><option value="">Select employee…</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}<option value={GENERAL}>General business expenses</option></select></Field></div>
             <Field label="Expense year"><select value={year} onChange={(e) => changeYear(Number(e.target.value))} className={inputCls}>{years.map((value) => <option key={value}>{value}</option>)}</select></Field>
             <Field label="Expense month"><select value={expenseMonth} onChange={(e) => setExpenseMonth(Number(e.target.value))} className={inputCls}>{MONTHS.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></Field>
@@ -341,7 +363,7 @@ export default function Home() {
             {expenseEmployee === GENERAL && <p className="col-span-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-500 md:col-span-3">General expenses affect business totals only. They are not deducted from any employee’s individual net.</p>}
             {storedExpense && <p className="col-span-2 text-xs font-medium text-amber-700 md:col-span-3">An entry is already saved for this employee and month. Saving will update it, not add it twice.</p>}
             <button type="submit" disabled={savingExpense} className="col-span-2 min-h-12 rounded-xl bg-amber-500 px-5 py-2 font-semibold text-white shadow active:bg-amber-700 disabled:opacity-50 md:col-span-3 md:w-fit">{savingExpense ? "Saving…" : storedExpense ? "Update Monthly Expenses" : "Save Monthly Expenses"}</button>
-          </form>
+          </fieldset></form>
           <div className="mt-6 border-t border-slate-100 pt-4"><h3 className="mb-3 text-sm font-semibold">Saved expenses · {formEmployee?.name ?? (expenseEmployee === GENERAL ? "General business" : "All employees")} · {year}</h3><ExpenseList rows={expenseHistory} onEdit={(expense) => editExpense(expense.employeeId, expense.month)} onDelete={deleteExpense} /></div>
         </section>
 
@@ -361,7 +383,7 @@ export default function Home() {
           <MonthRangeSelector year={year} fromMonth={fromMonth} toMonth={toMonth} onChange={(from, to) => { setFromMonth(from); setToMonth(to); }} />
           <p className="mb-3 text-sm font-semibold text-slate-600">{scopeEmployee?.name ?? "All employees"} · {monthRangeLabel(year, reportRange)} totals</p><TotalsCards totals={rangeTotals} />
           {!scopeEmployee && rangeExpenses.some((row) => row.employeeId === null) && <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Includes {inr(calculateTotals([], rangeExpenses.filter((row) => row.employeeId === null)).expenses)} in general business expenses for this range. Individual employee totals include only their own expenses.</p>}
-          <FinalReportShare key={`${year}-${fromMonth}-${toMonth}-${scopeEmployee?.id ?? "all"}`} year={year} fromMonth={fromMonth} toMonth={toMonth} employees={employees} reports={reports} expenses={expenses} selectedEmployee={scopeEmployee} disabled={loading || Boolean(loadError)} />
+          <FinalReportShare key={`${year}-${fromMonth}-${toMonth}-${scopeEmployee?.id ?? "all"}`} year={year} fromMonth={fromMonth} toMonth={toMonth} employees={employees} reports={currentReports} expenses={currentExpenses} selectedEmployee={scopeEmployee} disabled={loading || Boolean(loadError)} />
           <FullExportDownloads year={year} fromMonth={fromMonth} toMonth={toMonth} employees={employees} />
           <div className="my-4"><Action onClick={exportSummary}>Download summary CSV</Action></div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{months.map((monthly) => <article key={monthly.month} data-testid={`month-${monthly.month}`} className="rounded-xl border border-slate-200 p-4"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{monthly.name}</h3><span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">{scopeEmployee ? `${monthly.entries}/2 cycles` : `${monthly.entries} delivery reports`}</span></div><dl className="space-y-1.5 text-sm"><Row label="Deliveries" value={String(monthly.deliveries)} /><Row label="Total Value" value={inr(monthly.total)} /><Row label="Monthly Expenses" value={monthly.expenseEntries ? inr(monthly.expenses) : "Not entered"} tone="expense" /><Row label="Net Earnings" value={inr(monthly.net)} tone={monthly.net < 0 ? "expense" : "net"} /></dl>
