@@ -1,4 +1,5 @@
 import { normalizeName } from "@/lib/employees";
+import { cycleDayRange } from "@/lib/report-period";
 
 export const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -6,7 +7,7 @@ export const MONTH_NAMES = [
 ];
 
 export const periodLabel = (year: number, month: number, cycle: number) =>
-  `${MONTH_NAMES[month - 1]} ${year} (${cycle === 1 ? "1 – 15" : "16 – End"})`;
+  `${MONTH_NAMES[month - 1]} ${year} (${cycleDayRange(cycle, year, month)})`;
 
 export type ReportInput = {
   empName: string;

@@ -1,5 +1,8 @@
 import ExcelJS from "exceljs";
 import { calculateTotals, sameEmployeeName, type EmployeeRow, type ExpenseRow, type ReportRow } from "@/lib/delivery-totals";
+import { employeeNameList } from "@/lib/export-filenames";
+import { lastDayOfMonth, exportCycleLabel } from "@/lib/report-period";
+import { isInMonthRange, monthRange, monthRangeLabel } from "@/lib/report-range";
 
 export const EXPORT_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 export type ExportSnapshot = {
@@ -7,30 +10,15 @@ export type ExportSnapshot = {
   reports: (ReportRow & { createdAt: Date | string })[];
   expenses: (ExpenseRow & { updatedAt: Date | string })[];
 };
-export type ExportScope = { year: number | null; employeeName: string | null; generatedAt: Date };
+export type ExportScope = { year: number | null; employeeName: string | null; generatedAt: Date; fromMonth?: number; toMonth?: number };
 type Cell = string | number | null;
 export type ExportRecord = {
   recordType: string;
-  id?: number | null;
-  employeeId?: number | null;
-  employeeName?: string;
-  year?: number;
-  month?: number;
-  monthName?: string;
-  cycle?: string;
-  periodStart?: string;
-  periodEnd?: string;
-  deliveries?: number;
-  price?: number;
-  totalValue?: number;
-  expenses?: number;
-  netEarnings?: number;
-  reportCount?: number;
-  expenseCount?: number;
-  expenseStatus?: string;
-  notes?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  id?: number | null; employeeId?: number | null; employeeName?: string;
+  year?: number; month?: number; monthName?: string; cycle?: string; periodStart?: string; periodEnd?: string;
+  deliveries?: number; price?: number; totalValue?: number; expenses?: number; netEarnings?: number;
+  reportCount?: number; expenseCount?: number; expenseStatus?: string;
+  notes?: string; createdAt?: string; updatedAt?: string;
 };
 export type ExportColumn = { key: keyof ExportRecord; label: string; width: number; money?: boolean };
 export type ExportTable = { name: string; columns: ExportColumn[]; rows: ExportRecord[] };
@@ -65,10 +53,14 @@ const totalsRecord = (reports: ReportRow[], expenses: ExpenseRow[]) => {
   return { deliveries: totals.deliveries, totalValue: totals.total, expenses: totals.expenses, netEarnings: totals.net,
     reportCount: totals.entries, expenseCount: totals.expenseEntries, expenseStatus: totals.expenseEntries ? "Entered" : "Not entered" };
 };
-const summaryColumns = columns(["recordType", "employeeId", "employeeName", "year", "month", "monthName", "deliveries", "totalValue", "expenses", "netEarnings", "reportCount", "expenseCount", "expenseStatus"]);
+// Employee names and financial information are at the left; internal IDs are kept at the right.
+const summaryColumns = columns(["employeeName", "year", "monthName", "deliveries", "totalValue", "expenses", "netEarnings", "expenseStatus", "reportCount", "expenseCount", "month", "employeeId", "recordType"]);
 
-export function buildExportTables(snapshot: ExportSnapshot, scope: ExportScope): ExportTable[] {
-  // Also retain names from old reports which have no employee-list row.
+export function buildExportTables(input: ExportSnapshot, scope: ExportScope): ExportTable[] {
+  const range = monthRange(scope.fromMonth ?? 1, scope.toMonth ?? 12);
+  const fullYear = range.fromMonth === 1 && range.toMonth === 12;
+  const included = (row: { year: number; month: number }) => (scope.year === null || row.year === scope.year) && isInMonthRange(row.month, range);
+  const snapshot = { ...input, reports: input.reports.filter(included), expenses: input.expenses.filter(included) };
   const roster: { id: number | null; name: string; createdAt: Date | string | null }[] = snapshot.employees.map((employee) => ({ ...employee }));
   for (const report of snapshot.reports) {
     if (!roster.some((employee) => sameEmployeeName(employee.name, report.empName))) {
@@ -76,28 +68,32 @@ export function buildExportTables(snapshot: ExportSnapshot, scope: ExportScope):
     }
   }
   roster.sort((a, b) => a.name.localeCompare(b.name));
+  const names = employeeNameList(roster.map((employee) => employee.name));
+  const combinedNames = scope.employeeName ?? (names
+    ? names + (snapshot.expenses.some((expense) => expense.employeeId === null) ? " + General business expenses" : "")
+    : "General business expenses");
   const savedYears = [...new Set([...snapshot.reports.map((row) => row.year), ...snapshot.expenses.map((row) => row.year)])].sort((a, b) => a - b);
   const years = scope.year !== null ? [scope.year] : savedYears.length ? savedYears : [scope.generatedAt.getUTCFullYear()];
   const info: ExportRecord[] = [
     { recordType: "Export Info", notes: "App: Bharathi Enterprises — Ekart Delivery Monitor" },
     { recordType: "Export Info", notes: `Years: ${scope.year ?? "All saved years"}` },
-    { recordType: "Export Info", notes: `Employees: ${scope.employeeName ?? "All employees"}` },
+    { recordType: "Export Info", notes: `Month range: ${monthRangeLabel(scope.year, range)} (inclusive)` },
+    { recordType: "Export Info", notes: `Employees: ${scope.employeeName ?? (names || "No saved employee names")}` },
     { recordType: "Export Info", notes: `Saved rows: ${snapshot.employees.length} employees; ${snapshot.reports.length} delivery reports; ${snapshot.expenses.length} monthly expenses.` },
-    { recordType: "Export Info", notes: "All amounts are INR. Timestamps are UTC. Expenses are monthly, not per 15-day cycle. Net = Total Value - Expenses." },
+    { recordType: "Export Info", notes: "All amounts are INR. Timestamps are UTC. Expenses are monthly, not per cycle. Net = Total Value - Expenses." },
     { recordType: "Export Info", notes: "Delivery and expense records are separate. Summary rows are calculated totals, not extra transactions. Do not sum detailed and summary rows together." },
     { recordType: "Export Info", notes: "General business expenses are included once in business totals and never assigned to individual employees." },
-    { recordType: "Export Info", notes: "Each employee monthly summary includes all 12 months; zero values and Not entered indicate no saved expense entry." },
-    { recordType: "Export Info", notes: "If there are no saved reports or expenses, empty monthly summaries use the current year." },
+    { recordType: "Export Info", notes: "Monthly summaries include only the selected From–To months. Yearly and grand totals are for those months only, not a full-year total unless January–December is selected." },
+    { recordType: "Export Info", notes: "The second cycle ends on the actual last date of the selected month, including leap years." },
     { recordType: "Export Info", notes: "Generated at", createdAt: scope.generatedAt.toISOString() },
   ];
   const employeeRows: ExportRecord[] = roster.map((employee) => ({ recordType: "Employee", id: employee.id, employeeId: employee.id,
     employeeName: employee.name, createdAt: iso(employee.createdAt) }));
   const reportRows: ExportRecord[] = [...snapshot.reports].sort((a, b) => a.year - b.year || a.month - b.month || a.cycle - b.cycle || a.id - b.id).map((report) => {
-    const lastDay = new Date(Date.UTC(report.year, report.month, 0)).getUTCDate();
     const date = (day: number) => `${report.year}-${String(report.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     return { recordType: "Delivery Report", id: report.id, employeeId: roster.find((employee) => sameEmployeeName(employee.name, report.empName))?.id ?? null,
       employeeName: report.empName, year: report.year, month: report.month, monthName: EXPORT_MONTHS[report.month - 1],
-      cycle: report.cycle === 1 ? "Cycle 1 (1–15)" : "Cycle 2 (16–end)", periodStart: date(report.cycle === 1 ? 1 : 16), periodEnd: date(report.cycle === 1 ? 15 : lastDay),
+      cycle: exportCycleLabel(report.cycle, report.year, report.month), periodStart: date(report.cycle === 1 ? 1 : 16), periodEnd: date(report.cycle === 1 ? 15 : lastDayOfMonth(report.year, report.month)),
       deliveries: report.deliveries, price: money(report.pricePerDelivery), totalValue: money(report.totalValue), reportCount: 1,
       notes: report.notes ?? "", createdAt: iso(report.createdAt) };
   });
@@ -106,49 +102,45 @@ export function buildExportTables(snapshot: ExportSnapshot, scope: ExportScope):
     year: expense.year, month: expense.month, monthName: EXPORT_MONTHS[expense.month - 1], expenses: money(expense.amount),
     expenseCount: 1, expenseStatus: "Entered", notes: expense.notes ?? "", updatedAt: iso(expense.updatedAt),
   }));
-  const employeeMonthly: ExportRecord[] = [];
-  const employeeYearly: ExportRecord[] = [];
-  const businessMonthly: ExportRecord[] = [];
-  const businessYearly: ExportRecord[] = [];
-  const overall: ExportRecord[] = [];
+  const employeeMonthly: ExportRecord[] = [], employeeYearly: ExportRecord[] = [];
+  const businessMonthly: ExportRecord[] = [], businessYearly: ExportRecord[] = [], overall: ExportRecord[] = [];
   for (const employee of roster) {
     const ownReports = snapshot.reports.filter((report) => sameEmployeeName(report.empName, employee.name));
     const ownExpenses = employee.id === null ? [] : snapshot.expenses.filter((expense) => expense.employeeId === employee.id);
     for (const year of years) {
-      const yearReports = ownReports.filter((row) => row.year === year);
-      const yearExpenses = ownExpenses.filter((row) => row.year === year);
-      for (let month = 1; month <= 12; month++) {
+      const yearReports = ownReports.filter((row) => row.year === year), yearExpenses = ownExpenses.filter((row) => row.year === year);
+      for (let month = range.fromMonth; month <= range.toMonth; month++) {
         employeeMonthly.push({ recordType: "Employee Monthly Total", employeeId: employee.id, employeeName: employee.name, year, month, monthName: EXPORT_MONTHS[month - 1],
           ...totalsRecord(yearReports.filter((row) => row.month === month), yearExpenses.filter((row) => row.month === month)) });
       }
-      employeeYearly.push({ recordType: "Employee Yearly Total", employeeId: employee.id, employeeName: employee.name, year, ...totalsRecord(yearReports, yearExpenses) });
+      employeeYearly.push({ recordType: fullYear ? "Employee Yearly Total" : "Employee Month-Range Total", employeeId: employee.id, employeeName: employee.name, year, ...totalsRecord(yearReports, yearExpenses) });
     }
     overall.push({ recordType: "Employee Grand Total", employeeId: employee.id, employeeName: employee.name, ...totalsRecord(ownReports, ownExpenses) });
   }
   for (const year of years) {
-    const yearReports = snapshot.reports.filter((row) => row.year === year);
-    const yearExpenses = snapshot.expenses.filter((row) => row.year === year);
-    for (let month = 1; month <= 12; month++) {
-      businessMonthly.push({ recordType: scope.employeeName ? "Selected Employee Monthly Total" : "Business Monthly Total", employeeName: scope.employeeName ?? "All employees + general business expenses", year, month, monthName: EXPORT_MONTHS[month - 1],
+    const yearReports = snapshot.reports.filter((row) => row.year === year), yearExpenses = snapshot.expenses.filter((row) => row.year === year);
+    for (let month = range.fromMonth; month <= range.toMonth; month++) {
+      businessMonthly.push({ recordType: scope.employeeName ? "Selected Employee Monthly Total" : "Business Monthly Total", employeeName: combinedNames, year, month, monthName: EXPORT_MONTHS[month - 1],
         ...totalsRecord(yearReports.filter((row) => row.month === month), yearExpenses.filter((row) => row.month === month)) });
     }
-    businessYearly.push({ recordType: scope.employeeName ? "Selected Employee Yearly Total" : "Business Yearly Total", employeeName: scope.employeeName ?? "All employees + general business expenses", year, ...totalsRecord(yearReports, yearExpenses) });
+    businessYearly.push({ recordType: scope.employeeName ? (fullYear ? "Selected Employee Yearly Total" : "Selected Employee Month-Range Total") : (fullYear ? "Business Yearly Total" : "Business Month-Range Total"), employeeName: combinedNames, year, ...totalsRecord(yearReports, yearExpenses) });
   }
-  overall.push({ recordType: scope.employeeName ? "Selected Employee Grand Total" : "Business Grand Total", employeeName: scope.employeeName ?? "All employees + general business expenses", ...totalsRecord(snapshot.reports, snapshot.expenses) });
+  overall.push({ recordType: scope.employeeName ? "Selected Employee Grand Total" : "Business Grand Total", employeeName: combinedNames, ...totalsRecord(snapshot.reports, snapshot.expenses) });
+  // Open Excel directly on actual delivery details, with names in column A.
   return [
-    { name: "Export Info", columns: columns(["recordType", "notes", "createdAt"]), rows: info },
-    { name: "Employees", columns: columns(["recordType", "id", "employeeId", "employeeName", "createdAt"]), rows: employeeRows },
-    { name: "Delivery Reports", columns: columns(["recordType", "id", "employeeId", "employeeName", "year", "month", "monthName", "cycle", "periodStart", "periodEnd", "deliveries", "price", "totalValue", "notes", "createdAt"]), rows: reportRows },
-    { name: "Monthly Expenses", columns: columns(["recordType", "id", "employeeId", "employeeName", "year", "month", "monthName", "expenses", "notes", "updatedAt"]), rows: expenseRows },
+    { name: "Delivery Reports", columns: columns(["employeeName", "year", "monthName", "cycle", "deliveries", "price", "totalValue", "notes", "periodStart", "periodEnd", "createdAt", "id", "employeeId", "month", "recordType"]), rows: reportRows },
+    { name: "Monthly Expenses", columns: columns(["employeeName", "year", "monthName", "expenses", "notes", "updatedAt", "id", "employeeId", "month", "recordType"]), rows: expenseRows },
     { name: "Employee Monthly", columns: summaryColumns, rows: employeeMonthly },
     { name: "Employee Yearly", columns: summaryColumns.filter((column) => column.key !== "month" && column.key !== "monthName"), rows: employeeYearly },
     { name: "Monthly Totals", columns: summaryColumns, rows: businessMonthly },
     { name: "Yearly Totals", columns: summaryColumns.filter((column) => column.key !== "month" && column.key !== "monthName"), rows: businessYearly },
     { name: "Grand Totals", columns: summaryColumns.filter((column) => !["year", "month", "monthName"].includes(column.key)), rows: overall },
+    { name: "Employees", columns: columns(["employeeName", "createdAt", "id", "employeeId", "recordType"]), rows: employeeRows },
+    { name: "Export Info", columns: columns(["notes", "createdAt", "recordType"]), rows: info },
   ];
 }
 
-// Keep names/notes as literal text, not spreadsheet formulas. Numeric negative balances remain numeric.
+// Names and notes are literal text, not spreadsheet formulas. Numeric negative balances stay numeric.
 export function csvCell(value: Cell | undefined, isMoney = false): string {
   let text = typeof value === "number" && isMoney ? value.toFixed(2) : value == null ? "" : String(value);
   if (typeof value === "string" && /^[\s\uFEFF]*[=+\-@]/.test(value)) text = "'" + text;
@@ -156,42 +148,45 @@ export function csvCell(value: Cell | undefined, isMoney = false): string {
 }
 export function buildFullCsv(tables: ExportTable[]): string {
   const rows = [EXPORT_COLUMNS.map((column) => csvCell(column.label)).join(",")];
-  for (const table of tables) for (const row of table.rows) {
-    rows.push(EXPORT_COLUMNS.map((column) => csvCell(row[column.key], column.money)).join(","));
-  }
+  for (const table of tables) for (const row of table.rows) rows.push(EXPORT_COLUMNS.map((column) => csvCell(row[column.key], column.money)).join(","));
   return "\uFEFF" + rows.join("\r\n") + "\r\n";
 }
-
 export async function buildFullXlsx(tables: ExportTable[], generatedAt: Date): Promise<Uint8Array<ArrayBuffer>> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Bharathi Enterprises";
   workbook.title = "Bharathi Enterprises — Full Delivery Details";
   workbook.subject = "Employees, delivery reports, monthly expenses and financial totals";
-  workbook.created = generatedAt;
-  workbook.modified = generatedAt;
+  workbook.created = generatedAt; workbook.modified = generatedAt;
+  workbook.views = [{ x: 0, y: 0, width: 1280, height: 800, visibility: "visible", activeTab: 0, firstSheet: 0 }];
   for (const table of tables) {
-    const sheet = workbook.addWorksheet(table.name, { views: [{ state: "frozen", ySplit: 1 }], properties: { defaultRowHeight: 20 } });
-    sheet.columns = table.columns.map((column) => ({ header: column.label, key: column.key, width: column.key === "notes" && table.name === "Export Info" ? 100 : column.width }));
+    const freezeNames = table.columns[0].key === "employeeName";
+    const sheet = workbook.addWorksheet(table.name, {
+      views: [{ state: "frozen", ySplit: 1, xSplit: freezeNames ? 1 : 0, rightToLeft: false, topLeftCell: freezeNames ? "B2" : "A2", activeCell: "A2" }],
+      properties: { defaultRowHeight: 22 },
+    });
+    sheet.columns = table.columns.map((column) => ({ header: column.label, key: column.key, width: column.key === "notes" && table.name === "Export Info" ? 90 : column.width }));
     sheet.addRows(table.rows);
-    const header = sheet.getRow(1);
-    header.height = 32;
+    const header = sheet.getRow(1); header.height = 32;
     header.eachCell((cell) => {
       cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
-      cell.alignment = { vertical: "middle", wrapText: true };
+      cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
     });
     sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(1, sheet.rowCount), column: table.columns.length } };
-    table.columns.forEach((column, index) => {
-      if (column.money) sheet.getColumn(index + 1).numFmt = '#,##0.00;[Red]-#,##0.00';
-    });
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
-      row.eachCell((cell) => {
-        cell.alignment = { vertical: "top", wrapText: true };
-        if (rowNumber % 2 === 0) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F7FB" } };
+    table.columns.forEach((column, index) => { if (column.money) sheet.getColumn(index + 1).numFmt = '#,##0.00;[Red]-#,##0.00'; });
+    sheet.eachRow((row, number) => {
+      if (number === 1) return;
+      let maxLines = 1;
+      row.eachCell((cell, index) => {
+        cell.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+        if (number % 2 === 0) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F7FB" } };
+        if (typeof cell.value === "string") {
+          const width = Number(sheet.getColumn(index).width ?? 20) - 2;
+          maxLines = Math.max(maxLines, cell.value.split("\n").reduce((count, line) => count + Math.max(1, Math.ceil(line.length / width)), 0));
+        }
       });
+      row.height = Math.min(150, Math.max(22, maxLines * 15));
     });
   }
-  const buffer = await workbook.xlsx.writeBuffer();
-  return new Uint8Array(buffer);
+  return new Uint8Array(await workbook.xlsx.writeBuffer());
 }
