@@ -1,7 +1,7 @@
 /* Bharathi Enterprises PWA: cache only public icons and an offline notice.
    Never cache employee data, API responses, PINs, downloads or app HTML. */
 const CACHE_PREFIX = "bharathi-public-assets-";
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const PUBLIC_ASSETS = [
   "/offline.html",
   "/icons/app-192.png",
