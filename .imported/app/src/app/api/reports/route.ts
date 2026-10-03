@@ -23,18 +23,7 @@ export async function GET(req: NextRequest) {
     : base
   ).orderBy(desc(reports.year), desc(reports.month), desc(reports.cycle), desc(reports.id));
 
-  // Keep the newest row when an older version was accidentally submitted twice.
-  const uniqueRows = rows.filter((row, index, all) =>
-    index === all.findIndex(
-      (candidate) =>
-        candidate.empName.trim().toLowerCase() === row.empName.trim().toLowerCase() &&
-        candidate.year === row.year &&
-        candidate.month === row.month &&
-        candidate.cycle === row.cycle,
-    ),
-  );
-
-  return NextResponse.json({ reports: uniqueRows });
+  return NextResponse.json({ reports: rows });
 }
 
 export async function POST(req: NextRequest) {
@@ -46,6 +35,7 @@ export async function POST(req: NextRequest) {
     const cycle = Number(body.cycle);
     const deliveries = Number(body.deliveries ?? 0);
     const pricePerDelivery = Number(body.pricePerDelivery ?? 0);
+    const expenses = Number(body.expenses ?? 0);
     const notes = body.notes ? String(body.notes) : null;
 
     if (!empName) {
@@ -54,11 +44,12 @@ export async function POST(req: NextRequest) {
     if (!year || month < 1 || month > 12 || (cycle !== 1 && cycle !== 2)) {
       return NextResponse.json({ error: "Invalid period" }, { status: 400 });
     }
-    if (deliveries < 0 || pricePerDelivery < 0) {
+    if (deliveries < 0 || pricePerDelivery < 0 || expenses < 0) {
       return NextResponse.json({ error: "Values cannot be negative" }, { status: 400 });
     }
 
     const totalValue = deliveries * pricePerDelivery;
+    const netValue = totalValue - expenses;
 
     const [row] = await db
       .insert(reports)
@@ -69,7 +60,9 @@ export async function POST(req: NextRequest) {
         cycle,
         deliveries,
         pricePerDelivery: pricePerDelivery.toFixed(2),
+        expenses: expenses.toFixed(2),
         totalValue: totalValue.toFixed(2),
+        netValue: netValue.toFixed(2),
         notes,
       })
       .returning();

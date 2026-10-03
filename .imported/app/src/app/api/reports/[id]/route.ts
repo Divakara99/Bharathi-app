@@ -30,6 +30,7 @@ export async function PATCH(
   const body = await req.json();
   const deliveries = Number(body.deliveries ?? 0);
   const pricePerDelivery = Number(body.pricePerDelivery ?? 0);
+  const expenses = Number(body.expenses ?? 0);
   const totalValue = deliveries * pricePerDelivery;
 
   const [row] = await db
@@ -41,7 +42,9 @@ export async function PATCH(
       cycle: Number(body.cycle),
       deliveries,
       pricePerDelivery: pricePerDelivery.toFixed(2),
+      expenses: expenses.toFixed(2),
       totalValue: totalValue.toFixed(2),
+      netValue: (totalValue - expenses).toFixed(2),
       notes: body.notes ? String(body.notes) : null,
     })
     .where(eq(reports.id, numId))
