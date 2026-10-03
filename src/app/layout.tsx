@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { createPwaSafetyScript } from "@/lib/pwa-safety";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,6 +30,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <script id="bharathi-pwa-safety" dangerouslySetInnerHTML={{ __html: createPwaSafetyScript(process.env.NODE_ENV === "production") }} />
+      </head>
       <body className="bg-slate-100 text-slate-900 antialiased">{children}</body>
     </html>
   );

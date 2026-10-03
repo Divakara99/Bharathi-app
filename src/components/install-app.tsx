@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { clearAppWorkerCache, isProductionPwa } from "@/lib/pwa-safety";
 
 const subscribeEnvironment = () => () => {};
-const installEligible = () => window.isSecureContext && window.self === window.top;
+const runtimePwaEnabled = () => isProductionPwa(process.env.NODE_ENV === "production", window.location.hostname);
+const installEligible = () => runtimePwaEnabled() && window.isSecureContext && window.self === window.top;
 const standaloneSnapshot = () => window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
 const serverSnapshot = () => false;
 function subscribeStandalone(callback: () => void) {
@@ -29,11 +31,10 @@ export default function InstallApp() {
   useEffect(() => {
     let alive = true;
     const displayMode = window.matchMedia("(display-mode: standalone)");
-    const isInstalled = standaloneSnapshot;
     const canInstall = installEligible();
-    const modeChanged = () => { if (alive) setInstalled(isInstalled()); };
+    const modeChanged = () => { if (alive) setInstalled(standaloneSnapshot()); };
     const installAvailable = (event: Event) => {
-      if (!canInstall || isInstalled()) return;
+      if (!canInstall || standaloneSnapshot()) return;
       event.preventDefault();
       if (alive) { setPrompt(event as InstallPromptEvent); setError(""); }
     };
@@ -46,14 +47,11 @@ export default function InstallApp() {
     const updateWorker = () => {
       if (document.visibilityState === "visible") void registration?.update().catch(() => {});
     };
-    if (window.isSecureContext && "serviceWorker" in navigator) {
-      // Remove registrations created by older builds before installing the current worker.
-      void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
-        await Promise.all(registrations.map((existing) => existing.unregister()));
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.filter((name) => name.startsWith("bharathi-public-assets-")).map((name) => caches.delete(name)));
-        return navigator.serviceWorker.register("/sw.js?v=20261003-3", { scope: "/", updateViaCache: "none" });
-      }).then((registered) => {
+    if (!runtimePwaEnabled()) {
+      // The plain head script performs this before hydration; this also covers client navigation.
+      void clearAppWorkerCache();
+    } else if (canInstall && "serviceWorker" in navigator) {
+      void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then((registered) => {
         registration = registered;
         void registered.update().catch(() => {});
       }).catch(() => {});
@@ -80,7 +78,6 @@ export default function InstallApp() {
     finally { setBusy(false); }
   };
 
-  // No help card or explanation when the native install prompt is unavailable.
   if (!eligible || installed || standalone || !prompt) return null;
   return <section aria-label="Install Bharathi Enterprises" data-testid="pwa-install" className="flex flex-wrap items-center justify-end gap-2">
     <button type="button" onClick={() => void install()} disabled={busy} className="flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white active:bg-indigo-800 disabled:opacity-60">

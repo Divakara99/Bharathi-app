@@ -35,5 +35,8 @@ Only exact IDs belonging to uniquely labelled test records were removed. An inde
 - Long WhatsApp reports may require Copy report or a smaller month range. WhatsApp still requires the recipient selection and final Send action inside WhatsApp.
 - Internet is required for saved data, downloads and mutations. The service worker only caches icons and an offline notice, never employee data, PINs or financial API responses.
 
+## Development cache safeguard
+The project now disables worker registration in development and on `*.v0.build`, cleans only its own root worker/public asset caches before hydration, explicitly bypasses Next.js chunks and HMR, and provides a static `/cache-recovery.html` page. Production hashed-chunk caching is not overridden. Tests cover production installation plus actual `next dev` cleanup; cleanup never clears localStorage, cookies or the database. This does not prove the root cause of an error in a separately hosted v0 preview or update that preview automatically.
+
 ## Deploy this reviewed version
 Push/upload the current code and redeploy the same Vercel project used on your phone. Do not clear/recreate the database. Updating the Arena preview or another option does not automatically update an existing Vercel deployment.
