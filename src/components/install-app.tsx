@@ -47,7 +47,7 @@ export default function InstallApp() {
       if (document.visibilityState === "visible") void registration?.update().catch(() => {});
     };
     if (window.isSecureContext && "serviceWorker" in navigator) {
-      void navigator.serviceWorker.register("/sw.js?v=20261003", { scope: "/", updateViaCache: "none" }).then((registered) => {
+      void navigator.serviceWorker.register("/sw.js?v=20261003-2", { scope: "/", updateViaCache: "none" }).then((registered) => {
         registration = registered;
         void registered.update().catch(() => {});
       }).catch(() => {});
