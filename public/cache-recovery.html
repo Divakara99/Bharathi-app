@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#4338ca">
+  <title>Bharathi Enterprises · Refresh app</title>
+  <link rel="icon" href="/icons/app-192.png">
+  <style>*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px;background:#f1f5f9;color:#0f172a;font-family:system-ui,-apple-system,sans-serif}main{width:100%;max-width:440px;background:white;border:1px solid #e2e8f0;border-radius:24px;padding:28px;box-shadow:0 12px 32px #0f172a08}img{width:56px;height:56px;border-radius:14px}h1{font-size:24px;margin:20px 0 12px}p{font-size:14px;line-height:1.6;color:#64748b}button,a{display:block;width:100%;min-height:48px;border:0;border-radius:12px;padding:14px;font:600 14px system-ui;text-align:center;text-decoration:none}button{background:#4338ca;color:white;cursor:pointer}button:disabled{opacity:.6}a{margin-top:12px;color:#4338ca;background:#eef2ff}.note{font-size:12px}#status{min-height:22px}</style>
+</head>
+<body>
+  <main>
+    <img src="/icons/app-192.png" alt="Bharathi Enterprises">
+    <h1>Refresh the app</h1>
+    <p>If an update left an old page or JavaScript chunk open, refresh this app’s worker and cached public files.</p>
+    <p class="note">Saved reports, employee data, local settings and cookies will not be deleted. Unsaved form edits do not survive a reload.</p>
+    <button id="recover" type="button">Refresh app cache and reload</button>
+    <a href="/">Back to app</a>
+    <p id="status" role="status"></p>
+  </main>
+  <script>
+    document.getElementById('recover').addEventListener('click',async function(){
+      var button=this,status=document.getElementById('status');button.disabled=true;status.textContent='Refreshing…';
+      try{
+        if('serviceWorker' in navigator){
+          var registrations=await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.filter(function(reg){
+            if(reg.scope!==new URL('/',location.origin).href)return false;
+            return [reg.active,reg.waiting,reg.installing].some(function(worker){
+              if(!worker)return false;var url=new URL(worker.scriptURL);return url.origin===location.origin&&url.pathname==='/sw.js';
+            });
+          }).map(function(reg){return reg.unregister();}));
+        }
+        if('caches' in window){var keys=await caches.keys();await Promise.all(keys.filter(function(key){return key.startsWith('bharathi-public-assets-');}).map(function(key){return caches.delete(key);}));}
+        var home=new URL('/',location.href);home.searchParams.set('_refresh',String(Date.now()));
+        await fetch(home.href,{cache:'reload'}).catch(function(){});
+        location.replace(home.href);
+      }catch(error){button.disabled=false;status.textContent='Could not refresh. Reconnect and try again.';}
+    });
+  </script>
+</body>
+</html>

@@ -1,4 +1,6 @@
 import ExcelJS from "exceljs";
+import { csvCell } from "@/lib/csv";
+export { csvCell } from "@/lib/csv";
 import { calculateTotals, sameEmployeeName, type EmployeeRow, type ExpenseRow, type ReportRow } from "@/lib/delivery-totals";
 import { employeeNameList } from "@/lib/export-filenames";
 import { lastDayOfMonth, exportCycleLabel } from "@/lib/report-period";
@@ -11,7 +13,6 @@ export type ExportSnapshot = {
   expenses: (ExpenseRow & { updatedAt: Date | string })[];
 };
 export type ExportScope = { year: number | null; employeeName: string | null; generatedAt: Date; fromMonth?: number; toMonth?: number };
-type Cell = string | number | null;
 export type ExportRecord = {
   recordType: string;
   id?: number | null; employeeId?: number | null; employeeName?: string;
@@ -140,12 +141,6 @@ export function buildExportTables(input: ExportSnapshot, scope: ExportScope): Ex
   ];
 }
 
-// Names and notes are literal text, not spreadsheet formulas. Numeric negative balances stay numeric.
-export function csvCell(value: Cell | undefined, isMoney = false): string {
-  let text = typeof value === "number" && isMoney ? value.toFixed(2) : value == null ? "" : String(value);
-  if (typeof value === "string" && /^[\s\uFEFF]*[=+\-@]/.test(value)) text = "'" + text;
-  return `"${text.replaceAll('"', '""')}"`;
-}
 export function buildFullCsv(tables: ExportTable[]): string {
   const rows = [EXPORT_COLUMNS.map((column) => csvCell(column.label)).join(",")];
   for (const table of tables) for (const row of table.rows) rows.push(EXPORT_COLUMNS.map((column) => csvCell(row[column.key], column.money)).join(","));

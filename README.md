@@ -71,6 +71,32 @@ The input opens blank, masks typed digits by default, and offers Show/Hide. The 
 5. Deploy/redeploy the updated app.
 6. Android Chrome: Add to Home screen. iPhone Safari: Share → Add to Home Screen.
 
+## Install on a phone (PWA)
+This project includes a web app manifest with 192×192/512×512 PNG icons, a maskable icon, Apple home-screen metadata and a registered service worker. The interface shows only an **Install app** button when the browser offers installation. No How to install text or instructions are displayed in the app or embedded preview.
+
+**After updating this code, redeploy the Vercel project you actually open on your phone.** Editing the Arena preview does not update a different Vercel deployment or another option automatically. If a live site has no `/manifest.webmanifest`, Chrome cannot recognize this project's install metadata.
+
+- **Android:** open the live HTTPS site directly in Chrome, not inside the Arena preview or Incognito. Tap **Install app** when offered, or Chrome **⋮ → Add to home screen → Install**. If Chrome has not offered installation yet, interact with the page, wait around 30 seconds and refresh. Browser/device policies and existing installations can also affect whether an install prompt appears.
+- **iPhone/iPad:** open the live site in Safari and use **Share → Add to Home Screen → Add**.
+- A home-screen shortcut which opens in Chrome is different from a standalone installed app. This app asks the browser to install; it cannot force Android to complete an installation.
+- Installed apps still need an internet connection to load/save delivery reports, view balances, send WhatsApp reports and download files. Offline navigation displays a reconnect notice, not old financial records.
+- The service worker caches **only** `/offline.html` and public icon PNGs. Employee/report/expense APIs, PINs, mutations, exports and application HTML are never cached or queued by it.
+- No database schema change is required for this installation update. Push/download the latest code and redeploy; do not recreate or clear your database.
+
+Verify the live site's `/manifest.webmanifest`, `/sw.js`, `/icons/app-192.png` and `/icons/app-512.png` return 200. All must be served by the same deployment. Icon sources are in `public/icons/app.svg`; committed PNGs are ready to use. `node scripts/generate-pwa-icons.mjs` regenerates them if the branding changes.
+
+## Stale chunks / development-preview recovery
+A Turbopack `module factory is not available` error in a `v0.build` preview is a development/HMR failure; the hosting runtime may differ from this project's installed Next.js version. This project does not register a PWA worker under `next dev`, on `*.v0.build`, or inside an embedded preview. A plain pre-hydration head script removes only this app's old root `/sw.js` registration and `bharathi-public-assets-*` caches in development/v0. It reloads a controlled page at most once per session.
+
+The production worker explicitly bypasses `/_next/` (chunks, HMR and data) and `/api/`, and never caches app HTML. Next.js keeps its normal production immutable caching for content-hashed chunks; no blanket Cache-Control override was added for those assets. Worker updates and the manifest still revalidate.
+
+If the app's JavaScript cannot load, open **`/cache-recovery.html` on your deployed app** after redeploying this version. It is a standalone static page independent of the Next runtime. Its button removes only this app's worker/cache and reloads. It does not clear localStorage, cookies or database records. Unsaved form edits are not preserved through a reload.
+
+For a separate v0 preview, hard-refresh or restart that preview and make sure it runs the latest project dependencies. If an error persists with no service worker, the hosting development server must be restarted; client cleanup cannot repair its module graph. To test a production release, use the redeployed Vercel production address, not an older v0 preview. Do not clear all site storage as a troubleshooting step if another app version stores data locally.
+
+## Project check
+See [PROJECT_CHECK.md](./PROJECT_CHECK.md) for the review results, fixes, tested flows and remaining security limitations. The app has no login; delete PIN protection does not protect reading or editing data. No database schema change is needed for the review fixes.
+
 ## Validation
 - `npx next typegen`
 - `npm exec tsc -- --noEmit --pretty false`

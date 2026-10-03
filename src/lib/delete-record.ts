@@ -2,6 +2,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { employees, monthlyExpenses, reports } from "@/db/schema";
+import { withEmployeeLock } from "@/lib/employees";
 
 export type DeleteTarget =
   | { kind: "report"; id: number }
@@ -49,20 +50,24 @@ export async function deleteRecord(target: DeleteTarget): Promise<NextResponse> 
     if (!employee) {
       return NextResponse.json({ error: "Employee not found. Refresh the employee list.", code: "NOT_FOUND" }, { status: 404 });
     }
-    const [[reportCount], [expenseCount]] = await Promise.all([
-      db.select({ count: sql<number>`count(*)::int` }).from(reports)
-        .where(sql`lower(${reports.empName}) = ${employee.name.toLowerCase()}`),
-      db.select({ count: sql<number>`count(*)::int` }).from(monthlyExpenses)
-        .where(eq(monthlyExpenses.employeeId, employee.id)),
-    ]);
-    if (reportCount.count > 0 || expenseCount.count > 0) {
-      return NextResponse.json({
-        error: `${employee.name} has ${reportCount.count} delivery reports and ${expenseCount.count} monthly expense entries. Delete those first.`,
-        code: "EMPLOYEE_HAS_DATA",
-      }, { status: 409 });
-    }
-    await db.delete(employees).where(eq(employees.id, target.id));
-    return NextResponse.json({ ok: true });
+    return await withEmployeeLock(employee.name, async (tx) => {
+      const [confirmed] = await tx.select().from(employees).where(eq(employees.id, target.id)).limit(1).for("update");
+      if (!confirmed) return NextResponse.json({ error: "Employee not found. Refresh the employee list.", code: "NOT_FOUND" }, { status: 404 });
+      const [[reportCount], [expenseCount]] = await Promise.all([
+        tx.select({ count: sql<number>`count(*)::int` }).from(reports)
+          .where(sql`lower(${reports.empName}) = lower(${confirmed.name})`),
+        tx.select({ count: sql<number>`count(*)::int` }).from(monthlyExpenses)
+          .where(eq(monthlyExpenses.employeeId, confirmed.id)),
+      ]);
+      if (reportCount.count > 0 || expenseCount.count > 0) {
+        return NextResponse.json({
+          error: `${confirmed.name} has ${reportCount.count} delivery reports and ${expenseCount.count} monthly expense entries. Delete those first.`,
+          code: "EMPLOYEE_HAS_DATA",
+        }, { status: 409 });
+      }
+      await tx.delete(employees).where(eq(employees.id, target.id));
+      return NextResponse.json({ ok: true });
+    });
   } catch (error) {
     console.error("Record deletion failed", error instanceof Error ? error.message : "Database error");
     return NextResponse.json({ error: "Could not delete the record. Please try again.", code: "DELETE_FAILED" }, { status: 500 });

@@ -4,112 +4,71 @@ import { db } from "@/db";
 import { employees, monthlyExpenses } from "@/db/schema";
 import { requirePin } from "@/lib/pin";
 import { deleteRecord } from "@/lib/delete-record";
+import { lockEmployee } from "@/lib/employees";
+import { inputFailure, readInput } from "@/lib/api-input";
+import { InputError, inputInteger, inputMoney, inputNotes, MAX_DB_INTEGER } from "@/lib/input-validation";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const filters: SQL[] = [];
-  const yearParam = req.nextUrl.searchParams.get("year");
-  const employeeParam = req.nextUrl.searchParams.get("employeeId");
-  if (yearParam !== null) {
-    const year = Number(yearParam);
-    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
-      return NextResponse.json({ error: "Invalid year" }, { status: 400 });
-    }
-    filters.push(eq(monthlyExpenses.year, year));
-  }
-  if (employeeParam !== null) {
-    if (employeeParam === "general") filters.push(isNull(monthlyExpenses.employeeId));
-    else {
-      const id = Number(employeeParam);
-      if (!Number.isInteger(id) || id <= 0) {
-        return NextResponse.json({ error: "Invalid employee" }, { status: 400 });
-      }
-      filters.push(eq(monthlyExpenses.employeeId, id));
-    }
-  }
   try {
+    const filters: SQL[] = [];
+    const year = req.nextUrl.searchParams.get("year");
+    const employee = req.nextUrl.searchParams.get("employeeId");
+    if (year !== null) filters.push(eq(monthlyExpenses.year, inputInteger(year, "Year", 2000, 2100)));
+    if (employee !== null) filters.push(employee === "general" ? isNull(monthlyExpenses.employeeId) : eq(monthlyExpenses.employeeId, inputInteger(employee, "Employee ID", 1, MAX_DB_INTEGER)));
     const rows = await db.select({
-      id: monthlyExpenses.id,
-      employeeId: monthlyExpenses.employeeId,
-      employeeName: employees.name,
-      year: monthlyExpenses.year,
-      month: monthlyExpenses.month,
-      amount: monthlyExpenses.amount,
-      notes: monthlyExpenses.notes,
-      updatedAt: monthlyExpenses.updatedAt,
-    }).from(monthlyExpenses)
-      .leftJoin(employees, eq(monthlyExpenses.employeeId, employees.id))
+      id: monthlyExpenses.id, employeeId: monthlyExpenses.employeeId, employeeName: employees.name,
+      year: monthlyExpenses.year, month: monthlyExpenses.month, amount: monthlyExpenses.amount,
+      notes: monthlyExpenses.notes, updatedAt: monthlyExpenses.updatedAt,
+    }).from(monthlyExpenses).leftJoin(employees, eq(monthlyExpenses.employeeId, employees.id))
       .where(filters.length ? and(...filters) : undefined)
       .orderBy(desc(monthlyExpenses.year), desc(monthlyExpenses.month), asc(employees.name));
     return NextResponse.json({ expenses: rows });
-  } catch {
-    return NextResponse.json({ error: "Could not load expenses" }, { status: 500 });
-  }
+  } catch (error) { return inputFailure(error, "Could not load expenses. Please try again."); }
 }
 
-// Monthly upsert is scoped to one employee. Explicit NULL means general business expenses.
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      return NextResponse.json({ error: "Invalid expense entry" }, { status: 400 });
-    }
-    if (!Object.prototype.hasOwnProperty.call(body, "employeeId")) {
-      return NextResponse.json({ error: "Select an employee for these expenses" }, { status: 400 });
-    }
-    const employeeId = body.employeeId === null ? null : Number(body.employeeId);
-    const year = Number(body.year);
-    const month = Number(body.month);
-    const amount = Number(body.amount);
-    const notes = body.notes ? String(body.notes).trim().slice(0, 300) : null;
-    if (!Number.isInteger(year) || year < 2000 || year > 2100 ||
-        !Number.isInteger(month) || month < 1 || month > 12) {
-      return NextResponse.json({ error: "Invalid month or year" }, { status: 400 });
-    }
-    if (body.amount === null || body.amount === undefined || body.amount === "" ||
-        !Number.isFinite(amount) || amount < 0 || amount > 9999999999.99) {
-      return NextResponse.json({ error: "Enter a valid, non-negative expense amount" }, { status: 400 });
-    }
-    let employeeName: string | null = null;
-    if (employeeId !== null) {
-      if (!Number.isInteger(employeeId) || employeeId <= 0 || employeeId > 2147483647) {
-        return NextResponse.json({ error: "Select a valid employee" }, { status: 400 });
+    const body = await readInput(req);
+    if (!Object.prototype.hasOwnProperty.call(body, "employeeId")) throw new InputError("Select an employee for these expenses.");
+    const employeeId = body.employeeId === null ? null : inputInteger(body.employeeId, "Employee ID", 1, MAX_DB_INTEGER);
+    const year = inputInteger(body.year, "Year", 2000, 2100);
+    const month = inputInteger(body.month, "Month", 1, 12);
+    const amount = inputMoney(body.amount, "Expense amount");
+    const notes = inputNotes(body.notes);
+    return await db.transaction(async (tx) => {
+      let employeeName: string | null = null;
+      if (employeeId !== null) {
+        const [found] = await tx.select().from(employees).where(eq(employees.id, employeeId)).limit(1);
+        if (!found) return NextResponse.json({ error: "Employee not found. Add the employee in Staff first." }, { status: 404 });
+        await lockEmployee(tx, found.name);
+        const [confirmed] = await tx.select().from(employees).where(eq(employees.id, employeeId)).limit(1).for("update");
+        if (!confirmed) return NextResponse.json({ error: "This employee was removed. Refresh the list." }, { status: 404 });
+        employeeName = confirmed.name;
       }
-      const [employee] = await db.select().from(employees).where(eq(employees.id, employeeId)).limit(1);
-      if (!employee) {
-        return NextResponse.json({ error: "Employee not found. Add the employee in Staff first." }, { status: 404 });
-      }
-      employeeName = employee.name;
-    }
-    const values = { employeeId, year, month, amount: amount.toFixed(2), notes };
-    const set = { amount: amount.toFixed(2), notes, updatedAt: new Date() };
-    const rows = employeeId === null
-      ? await db.insert(monthlyExpenses).values(values).onConflictDoUpdate({
-          target: [monthlyExpenses.year, monthlyExpenses.month],
-          targetWhere: sql`${monthlyExpenses.employeeId} is null`,
-          set,
-        }).returning()
-      : await db.insert(monthlyExpenses).values(values).onConflictDoUpdate({
-          target: [monthlyExpenses.employeeId, monthlyExpenses.year, monthlyExpenses.month],
-          set,
-        }).returning();
-    return NextResponse.json({ expense: { ...rows[0], employeeName } }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Could not save expenses. Please try again." }, { status: 500 });
-  }
+      const values = { employeeId, year, month, amount: amount.toFixed(2), notes };
+      const set = { amount: amount.toFixed(2), notes, updatedAt: new Date() };
+      const rows = employeeId === null
+        ? await tx.insert(monthlyExpenses).values(values).onConflictDoUpdate({
+            target: [monthlyExpenses.year, monthlyExpenses.month], targetWhere: sql`${monthlyExpenses.employeeId} is null`, set,
+          }).returning()
+        : await tx.insert(monthlyExpenses).values(values).onConflictDoUpdate({
+            target: [monthlyExpenses.employeeId, monthlyExpenses.year, monthlyExpenses.month], set,
+          }).returning();
+      return NextResponse.json({ expense: { ...rows[0], employeeName } }, { status: 201 });
+    });
+  } catch (error) { return inputFailure(error, "Could not save expenses. Please try again."); }
 }
 
 export async function DELETE(req: NextRequest) {
   const denied = requirePin(req);
   if (denied) return denied;
-  const idParam = req.nextUrl.searchParams.get("id");
-  if (idParam !== null) return deleteRecord({ kind: "expense", id: Number(idParam) });
-  const employeeParam = req.nextUrl.searchParams.get("employeeId");
+  const id = req.nextUrl.searchParams.get("id");
+  if (id !== null) return deleteRecord({ kind: "expense", id: Number(id) });
+  const employee = req.nextUrl.searchParams.get("employeeId");
   return deleteRecord({
-    kind: "expense",
-    year: Number(req.nextUrl.searchParams.get("year")),
-    month: Number(req.nextUrl.searchParams.get("month")),
-    employeeId: employeeParam === null || employeeParam === "general" ? null : Number(employeeParam),
+    kind: "expense", year: Number(req.nextUrl.searchParams.get("year")), month: Number(req.nextUrl.searchParams.get("month")),
+    employeeId: employee === null || employee === "general" ? null : Number(employee),
   });
 }

@@ -92,11 +92,10 @@ export default function FinalReportShare({ year, employees, reports, expenses, s
 }
 
 function EmployeeReport({ person }: { person: FinalReportEmployee }) {
-  let entry = 0;
   return <article data-testid={`share-employee-${person.employee.id}`} className="overflow-hidden rounded-xl border border-slate-200">
     <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-50/70 px-3 py-3 sm:px-4"><h4 className="break-words text-sm font-bold text-indigo-900">{person.employee.name}</h4><span className="text-xs text-indigo-700">{person.totals.deliveries.toLocaleString("en-IN")} deliveries</span></div>
-    <div className="divide-y divide-slate-100">{person.months.map((month) => {
-      const firstEntry = entry + 1; entry += month.reports.length;
+    <div className="divide-y divide-slate-100">{person.months.map((month, index) => {
+      const firstEntry = 1 + person.months.slice(0, index).reduce((count, previous) => count + previous.reports.length, 0);
       return <MonthReport key={month.month} month={month} firstEntry={firstEntry} />;
     })}</div>
     <div className="grid grid-cols-1 gap-2 border-t border-slate-100 bg-slate-50 px-3 py-3 sm:grid-cols-3 sm:px-4">
